@@ -3,6 +3,7 @@ package com.hufsphere.linkboard.service;
 import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.domain.WorkItem;
 import com.hufsphere.linkboard.domain.WorkItemLink;
+import com.hufsphere.linkboard.dto.TeamDashboardResponse;
 import com.hufsphere.linkboard.dto.WorkItemDetailResponse;
 import com.hufsphere.linkboard.dto.WorkItemPageResponse;
 import com.hufsphere.linkboard.dto.WorkItemSummaryResponse;
@@ -13,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -86,7 +89,6 @@ public class WorkItemService {
             int page,
             int size
     ) {
-        // 1. workspaceId 기준 조건 검색 (기본 필터링 적용)
         List<WorkItem> workItems;
         if (sourceType != null && !sourceType.isBlank()) {
             SourceType type = SourceType.valueOf(sourceType.toLowerCase());
@@ -95,13 +97,11 @@ public class WorkItemService {
             workItems = workItemRepository.findByWorkspaceId(workspaceId);
         }
 
-        // 2. 검색어(query) 및 상태(status) 메모리 필터링 (간이 구현)
         List<WorkItem> filteredItems = workItems.stream()
                 .filter(item -> query == null || query.isBlank() || item.getTitle().contains(query))
                 .filter(item -> status == null || status.isBlank() || status.equalsIgnoreCase(item.getStatus()))
                 .collect(Collectors.toList());
 
-        // 3. DTO 변환
         List<WorkItemPageResponse.ItemSummary> items = filteredItems.stream()
                 .map(item -> WorkItemPageResponse.ItemSummary.builder()
                         .id(item.getId())
@@ -116,7 +116,6 @@ public class WorkItemService {
                         .build())
                 .collect(Collectors.toList());
 
-        // 4. 페이징 계산 및 반환
         int totalElements = items.size();
         int totalPages = (int) Math.ceil((double) totalElements / size);
 
@@ -126,6 +125,47 @@ public class WorkItemService {
                 .size(size)
                 .totalElements(totalElements)
                 .totalPages(totalPages)
+                .build();
+    }
+
+    public TeamDashboardResponse getTeamDashboard(Long workspaceId) {
+        List<WorkItem> workItems = workItemRepository.findByWorkspaceId(workspaceId);
+
+        // 1. 전체 작업 상태별 통계 집계
+        Map<String, Integer> globalStatusCounts = new HashMap<>();
+        for (WorkItem item : workItems) {
+            String st = item.getStatus() != null ? item.getStatus() : "UNKNOWN";
+            globalStatusCounts.put(st, globalStatusCounts.getOrDefault(st, 0) + 1);
+        }
+
+        // 2. 작성자(팀원)별 작업 그룹화 및 집계
+        Map<String, List<WorkItem>> groupedByAuthor = workItems.stream()
+                .filter(item -> item.getAuthorLogin() != null)
+                .collect(Collectors.groupingBy(WorkItem::getAuthorLogin));
+
+        List<TeamDashboardResponse.MemberStatus> memberStatuses = groupedByAuthor.entrySet().stream()
+                .map(entry -> {
+                    String author = entry.getKey();
+                    List<WorkItem> items = entry.getValue();
+
+                    Map<String, Integer> mCounts = new HashMap<>();
+                    for (WorkItem i : items) {
+                        String st = i.getStatus() != null ? i.getStatus() : "UNKNOWN";
+                        mCounts.put(st, mCounts.getOrDefault(st, 0) + 1);
+                    }
+
+                    return TeamDashboardResponse.MemberStatus.builder()
+                            .authorLogin(author)
+                            .totalAssigned(items.size())
+                            .statusCounts(mCounts)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return TeamDashboardResponse.builder()
+                .totalWorkItems(workItems.size())
+                .statusCounts(globalStatusCounts)
+                .members(memberStatuses)
                 .build();
     }
 }

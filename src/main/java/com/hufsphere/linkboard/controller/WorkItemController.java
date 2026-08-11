@@ -1,5 +1,6 @@
 package com.hufsphere.linkboard.controller;
 
+import com.hufsphere.linkboard.dto.TeamDashboardResponse;
 import com.hufsphere.linkboard.dto.WorkItemDetailResponse;
 import com.hufsphere.linkboard.dto.WorkItemPageResponse;
 import com.hufsphere.linkboard.dto.WorkItemSummaryResponse;
@@ -12,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@Tag(name = "WorkItem", description = "작업 상세, 요약 및 목록 API")
+@Tag(name = "WorkItem", description = "작업 상세, 요약, 목록 및 팀 현황판 API")
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -79,6 +80,19 @@ public class WorkItemController {
                 "success", true,
                 "code", "WORK_ITEM_LIST_OK",
                 "message", "작업 목록 조회 성공",
+                "data", response
+        ));
+    }
+
+    @Operation(summary = "팀 현황판 조회", description = "워크스페이스 내 전체 작업 현황 및 멤버별 작업 통계를 조회합니다.")
+    @GetMapping("/workspaces/{workspaceId}/team-dashboard")
+    public ResponseEntity<?> getTeamDashboard(@PathVariable Long workspaceId) {
+        TeamDashboardResponse response = workItemService.getTeamDashboard(workspaceId);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "code", "DASHBOARD_OK",
+                "message", "팀 현황판 조회 성공",
                 "data", response
         ));
     }
