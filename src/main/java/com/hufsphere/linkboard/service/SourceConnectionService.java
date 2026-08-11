@@ -4,6 +4,7 @@ import com.hufsphere.linkboard.domain.SourceConnection;
 import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.domain.Workspace;
 import com.hufsphere.linkboard.dto.SourceConnectionResponse;
+import com.hufsphere.linkboard.dto.SourceSyncResponse;
 import com.hufsphere.linkboard.dto.request.SourceConnectionCreateRequest;
 import com.hufsphere.linkboard.repository.SourceConnectionRepository;
 import com.hufsphere.linkboard.repository.WorkspaceRepository;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -60,6 +62,34 @@ public class SourceConnectionService {
                 .targetRepoOrBoard(saved.getTargetRepoOrBoard())
                 .lastSyncedAt(saved.getLastSyncedAt())
                 .createdAt(saved.getCreatedAt())
+                .build();
+    }
+
+    @Transactional
+    public SourceSyncResponse triggerSync(Long connectionId) {
+        SourceConnection connection = sourceConnectionRepository.findById(connectionId)
+                .orElseThrow(() -> new IllegalArgumentException("연동 출처를 찾을 수 없습니다. id=" + connectionId));
+
+        connection.setLastSyncedAt(LocalDateTime.now());
+        connection.setStatus("SYNCED");
+
+        return SourceSyncResponse.builder()
+                .connectionId(connection.getId())
+                .status("IN_PROGRESS")
+                .message("동기화 작업이 시작되었습니다.")
+                .syncedAt(connection.getLastSyncedAt())
+                .build();
+    }
+
+    public SourceSyncResponse getConnectionStatus(Long connectionId) {
+        SourceConnection connection = sourceConnectionRepository.findById(connectionId)
+                .orElseThrow(() -> new IllegalArgumentException("연동 출처를 찾을 수 없습니다. id=" + connectionId));
+
+        return SourceSyncResponse.builder()
+                .connectionId(connection.getId())
+                .status(connection.getStatus() != null ? connection.getStatus() : "CONNECTED")
+                .message("정상 연동 상태입니다.")
+                .syncedAt(connection.getLastSyncedAt())
                 .build();
     }
 }
