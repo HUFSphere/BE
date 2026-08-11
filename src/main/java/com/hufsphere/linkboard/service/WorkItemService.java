@@ -1,8 +1,10 @@
 package com.hufsphere.linkboard.service;
 
+import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.domain.WorkItem;
 import com.hufsphere.linkboard.domain.WorkItemLink;
 import com.hufsphere.linkboard.dto.WorkItemDetailResponse;
+import com.hufsphere.linkboard.dto.WorkItemPageResponse;
 import com.hufsphere.linkboard.dto.WorkItemSummaryResponse;
 import com.hufsphere.linkboard.repository.WorkItemLinkRepository;
 import com.hufsphere.linkboard.repository.WorkItemRepository;
@@ -23,14 +25,11 @@ public class WorkItemService {
     private final WorkItemLinkRepository workItemLinkRepository;
 
     public WorkItemDetailResponse getWorkItemDetail(Long workItemId, String lang) {
-        // 1. target WorkItem 조회
         WorkItem workItem = workItemRepository.findById(workItemId)
                 .orElseThrow(() -> new IllegalArgumentException("작업을 찾을 수 없습니다. id=" + workItemId));
 
-        // 2. 해당 작업과 연결된 WorkItemLink 목록 조회
         List<WorkItemLink> links = workItemLinkRepository.findByFromWorkItemIdOrToWorkItemId(workItemId, workItemId);
 
-        // 3. 연결된 상대방 WorkItem들을 LinkedItemResponse DTO로 변환
         List<WorkItemDetailResponse.LinkedItemResponse> linkedItems = links.stream()
                 .map(link -> {
                     WorkItem target = link.getFromWorkItem().getId().equals(workItemId)
@@ -47,7 +46,6 @@ public class WorkItemService {
                 })
                 .collect(Collectors.toList());
 
-        // 4. 최종 WorkItemDetailResponse DTO 반환
         return WorkItemDetailResponse.builder()
                 .id(workItem.getId())
                 .sourceType(workItem.getSourceType() != null ? workItem.getSourceType().name().toLowerCase() : null)
@@ -64,21 +62,70 @@ public class WorkItemService {
     }
 
     public WorkItemSummaryResponse getWorkItemSummary(Long workItemId, String lang) {
-        // 1. target WorkItem 존재 여부 검증
         WorkItem workItem = workItemRepository.findById(workItemId)
                 .orElseThrow(() -> new IllegalArgumentException("작업을 찾을 수 없습니다. id=" + workItemId));
 
-        // 2. 기존 summaryNative 값이 있으면 반환, 없으면 기본/생성 요약문 반환
         String summaryText = workItem.getSummaryNative() != null && !workItem.getSummaryNative().isBlank()
                 ? workItem.getSummaryNative()
                 : workItem.getTitle() + " 에 대한 " + lang + " 언어 요약입니다.";
 
-        // 3. DTO 반환
         return WorkItemSummaryResponse.builder()
                 .workItemId(workItem.getId())
                 .lang(lang)
                 .summaryText(summaryText)
                 .createdAt(LocalDateTime.now())
+                .build();
+    }
+
+    public WorkItemPageResponse getWorkItems(
+            Long workspaceId,
+            String query,
+            String sourceType,
+            String status,
+            String sort,
+            int page,
+            int size
+    ) {
+        // 1. workspaceId 기준 조건 검색 (기본 필터링 적용)
+        List<WorkItem> workItems;
+        if (sourceType != null && !sourceType.isBlank()) {
+            SourceType type = SourceType.valueOf(sourceType.toLowerCase());
+            workItems = workItemRepository.findByWorkspaceIdAndSourceType(workspaceId, type);
+        } else {
+            workItems = workItemRepository.findByWorkspaceId(workspaceId);
+        }
+
+        // 2. 검색어(query) 및 상태(status) 메모리 필터링 (간이 구현)
+        List<WorkItem> filteredItems = workItems.stream()
+                .filter(item -> query == null || query.isBlank() || item.getTitle().contains(query))
+                .filter(item -> status == null || status.isBlank() || status.equalsIgnoreCase(item.getStatus()))
+                .collect(Collectors.toList());
+
+        // 3. DTO 변환
+        List<WorkItemPageResponse.ItemSummary> items = filteredItems.stream()
+                .map(item -> WorkItemPageResponse.ItemSummary.builder()
+                        .id(item.getId())
+                        .sourceType(item.getSourceType() != null ? item.getSourceType().name().toLowerCase() : null)
+                        .itemType(item.getItemType())
+                        .sourceNumber(item.getSourceNumber())
+                        .title(item.getTitle())
+                        .status(item.getStatus())
+                        .authorLogin(item.getAuthorLogin())
+                        .sourceUrl(item.getSourceUrl())
+                        .sourceUpdatedAt(item.getSourceUpdatedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        // 4. 페이징 계산 및 반환
+        int totalElements = items.size();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+
+        return WorkItemPageResponse.builder()
+                .items(items)
+                .page(page)
+                .size(size)
+                .totalElements(totalElements)
+                .totalPages(totalPages)
                 .build();
     }
 }
