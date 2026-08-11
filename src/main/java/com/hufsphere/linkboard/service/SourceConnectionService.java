@@ -1,50 +1,35 @@
 package com.hufsphere.linkboard.service;
 
 import com.hufsphere.linkboard.domain.SourceConnection;
-import com.hufsphere.linkboard.domain.SourceType;
-import com.hufsphere.linkboard.dto.request.SourceConnectionCreateRequest;
-import com.hufsphere.linkboard.dto.response.SourceConnectionResponse;
-import com.hufsphere.linkboard.exception.WorkspaceNotFoundException;
+import com.hufsphere.linkboard.dto.SourceConnectionResponse;
 import com.hufsphere.linkboard.repository.SourceConnectionRepository;
-import com.hufsphere.linkboard.repository.WorkspaceRepository;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class SourceConnectionService {
 
-    private final WorkspaceRepository workspaceRepository;
     private final SourceConnectionRepository sourceConnectionRepository;
 
-    @Transactional
-    public SourceConnectionResponse connectSource(Long workspaceId, SourceConnectionCreateRequest request) {
-        if (!workspaceRepository.existsById(workspaceId)) {
-            throw new WorkspaceNotFoundException("워크스페이스를 찾을 수 없거나 소스에 접근할 수 없습니다");
-        }
+    public List<SourceConnectionResponse> getSourceConnections(Long workspaceId) {
+        List<SourceConnection> connections = sourceConnectionRepository.findByWorkspaceId(workspaceId);
 
-        SourceType sourceType = SourceType.fromValue(request.getSourceType());
-
-        SourceConnection sourceConnection = SourceConnection.builder()
-                .workspaceId(workspaceId)
-                .sourceType(sourceType)
-                .sourceRef(request.getSourceRef())
-                .build();
-
-        SourceConnection saved = sourceConnectionRepository.save(sourceConnection);
-        return SourceConnectionResponse.from(saved);
-    }
-
-    @Transactional(readOnly = true)
-    public List<SourceConnectionResponse> getSources(Long workspaceId) {
-        if (!workspaceRepository.existsById(workspaceId)) {
-            throw new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다");
-        }
-
-        return sourceConnectionRepository.findByWorkspaceIdOrderByCreatedAtAsc(workspaceId).stream()
-                .map(SourceConnectionResponse::from)
-                .toList();
+        return connections.stream()
+                .map(conn -> SourceConnectionResponse.builder()
+                        .id(conn.getId())
+                        .workspaceId(workspaceId)
+                        .sourceType(conn.getSourceType() != null ? conn.getSourceType().name().toLowerCase() : null)
+                        .status(conn.getStatus() != null ? conn.getStatus().name().toLowerCase() : null)
+                        .targetRepoOrBoard(conn.getTargetRepoOrBoard())
+                        .lastSyncedAt(conn.getLastSyncedAt())
+                        .createdAt(conn.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
     }
 }
