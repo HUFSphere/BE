@@ -1,0 +1,23 @@
+package com.hufsphere.linkboard.dto.request;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@NoArgsConstructor
+@Schema(description = "Q&A 질문 요청")
+public class QnaRequest {
+
+    @Schema(description = "사용자의 모국어 질문", example = "왜 세션 대신 JWT를 썼어요?")
+    @NotBlank(message = "question과 lang은 필수입니다")
+    private String question;
+
+    @Schema(description = "특정 작업 맥락에서 질문 시 그 작업 ID. 전역이면 생략", example = "142")
+    private Long contextWorkItemId;
+
+    @Schema(description = "답변 언어", example = "vi", allowableValues = {"ko", "vi", "en"})
+    @NotBlank(message = "question과 lang은 필수입니다")
+    private String lang;
+}
