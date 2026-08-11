@@ -13,9 +13,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -86,5 +88,51 @@ public class SourceConnectionController {
         SourceConnectionResponse response = sourceConnectionService.connectSource(workspaceId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("SOURCE_CONNECTED", "소스가 연결되었습니다", response));
+    }
+
+    // TODO: 인증 도입 후 Authorization 헤더 기반 워크스페이스 접근 권한 검증 추가
+    @Operation(summary = "소스 목록 조회", description = "워크스페이스에 연결된 소스 목록을 생성일 순으로 조회한다.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "소스 목록 조회 성공",
+                    content = @Content(schema = @Schema(implementation = SourceConnectionResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "code": "SOURCES_OK",
+                                      "message": "소스 목록 조회 성공",
+                                      "data": [
+                                        {
+                                          "sourceId": 1,
+                                          "workspaceId": 1,
+                                          "sourceType": "github",
+                                          "sourceRef": "pypa/sampleproject",
+                                          "connStatus": "done",
+                                          "lastSyncedAt": "2026-08-09T15:12:40",
+                                          "createdAt": "2026-08-09T15:10:00"
+                                        }
+                                      ]
+                                    }"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "워크스페이스를 찾을 수 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-08-09T17:15:00.000+00:00",
+                                      "status": 404,
+                                      "error": "Not Found",
+                                      "message": "워크스페이스를 찾을 수 없습니다",
+                                      "path": "/api/v1/workspaces/1/sources"
+                                    }"""))),
+    })
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<SourceConnectionResponse>>> getSources(
+            @Parameter(description = "소스를 조회할 워크스페이스 ID", example = "1")
+            @PathVariable Long workspaceId
+    ) {
+        List<SourceConnectionResponse> response = sourceConnectionService.getSources(workspaceId);
+        return ResponseEntity.ok(ApiResponse.success("SOURCES_OK", "소스 목록 조회 성공", response));
     }
 }

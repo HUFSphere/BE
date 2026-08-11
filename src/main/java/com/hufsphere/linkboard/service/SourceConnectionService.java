@@ -7,6 +7,7 @@ import com.hufsphere.linkboard.dto.response.SourceConnectionResponse;
 import com.hufsphere.linkboard.exception.WorkspaceNotFoundException;
 import com.hufsphere.linkboard.repository.SourceConnectionRepository;
 import com.hufsphere.linkboard.repository.WorkspaceRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,5 +35,16 @@ public class SourceConnectionService {
 
         SourceConnection saved = sourceConnectionRepository.save(sourceConnection);
         return SourceConnectionResponse.from(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SourceConnectionResponse> getSources(Long workspaceId) {
+        if (!workspaceRepository.existsById(workspaceId)) {
+            throw new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다");
+        }
+
+        return sourceConnectionRepository.findByWorkspaceIdOrderByCreatedAtAsc(workspaceId).stream()
+                .map(SourceConnectionResponse::from)
+                .toList();
     }
 }
