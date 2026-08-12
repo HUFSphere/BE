@@ -22,8 +22,8 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
-    @ExceptionHandler(UnsupportedSourceSyncException.class)
-    public ResponseEntity<ErrorResponse> handleUnsupportedSourceSync(UnsupportedSourceSyncException ex, HttpServletRequest request) {
+    @ExceptionHandler(InvalidSyncPayloadException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidSyncPayload(InvalidSyncPayloadException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
