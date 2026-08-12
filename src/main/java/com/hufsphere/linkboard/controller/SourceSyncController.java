@@ -2,6 +2,7 @@ package com.hufsphere.linkboard.controller;
 
 import com.hufsphere.linkboard.common.ApiResponse;
 import com.hufsphere.linkboard.common.ErrorResponse;
+import com.hufsphere.linkboard.dto.request.SourceSyncRequest;
 import com.hufsphere.linkboard.dto.response.SourceSyncResponse;
 import com.hufsphere.linkboard.service.SourceSyncService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,8 +30,9 @@ public class SourceSyncController {
     private final SourceSyncService sourceSyncService;
 
     // TODO: 인증 도입 후 Authorization 헤더 기반 검증 추가
-    @Operation(summary = "소스 동기화", description = "AI 서버의 수집·인덱싱 엔드포인트(POST /ingest/github)를 호출해 소스를 동기화한다. "
-            + "현재는 동기 방식으로 처리되며(호출이 끝날 때까지 대기 후 응답), github 소스만 지원한다.")
+    @Operation(summary = "소스 동기화", description = "AI 서버의 수집·인덱싱 엔드포인트(POST /ingest/{github|notion|figma})를 호출해 소스를 동기화한다. "
+            + "현재는 동기 방식으로 처리되며(호출이 끝날 때까지 대기 후 응답), "
+            + "github는 body 없이 sourceRef만으로 수집하고, notion은 body의 pages, figma는 body의 comments를 그대로 AI 서버에 전달한다.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "202",
@@ -45,6 +48,18 @@ public class SourceSyncController {
                                         "connStatus": "done",
                                         "startedAt": "2026-08-09T15:12:00"
                                       }
+                                    }"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "notion/figma 동기화에 필요한 pages/comments 누락",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-08-09T15:12:00.000+00:00",
+                                      "status": 400,
+                                      "error": "Bad Request",
+                                      "message": "notion 동기화에는 pages가 필요합니다",
+                                      "path": "/api/v1/sources/1/sync"
                                     }"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
@@ -86,9 +101,11 @@ public class SourceSyncController {
     @PostMapping("/sync")
     public ResponseEntity<ApiResponse<SourceSyncResponse>> sync(
             @Parameter(description = "동기화할 소스 연결 ID", example = "1")
-            @PathVariable Long sourceId
+            @PathVariable Long sourceId,
+            @Parameter(description = "github는 생략, notion은 pages, figma는 comments 필요")
+            @RequestBody(required = false) SourceSyncRequest request
     ) {
-        SourceSyncResponse response = sourceSyncService.sync(sourceId);
+        SourceSyncResponse response = sourceSyncService.sync(sourceId, request);
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.success("SYNC_STARTED", "동기화를 시작했습니다", response));
     }
