@@ -7,11 +7,15 @@ import com.hufsphere.linkboard.domain.SourceConnection;
 import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.domain.WorkItem;
 import com.hufsphere.linkboard.domain.WorkItemLink;
+import com.hufsphere.linkboard.domain.Workspace;
+import com.hufsphere.linkboard.repository.SourceConnectionRepository;
 import com.hufsphere.linkboard.repository.WorkItemLinkRepository;
 import com.hufsphere.linkboard.repository.WorkItemRepository;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,29 +26,43 @@ public class WorkItemSyncService {
 
     private final WorkItemRepository workItemRepository;
     private final WorkItemLinkRepository workItemLinkRepository;
+    private final SourceConnectionRepository sourceConnectionRepository;
 
+    // AI 서버의 extract/link-work-items는 요청을 보낸 소스 하나가 아니라 워크스페이스에
+    // 색인된 전체(github+notion+...)를 대상으로 응답한다 (라이브 검증으로 확인됨).
+    // 그래서 소스 단위가 아니라 워크스페이스 단위로 통째로 삭제 후 다시 채워야
+    // 서로 다른 소스 간 work_item_link(예: notion 결정 <-> github PR)가 유지된다.
     @Transactional
-    public void replace(SourceConnection sourceConnection, List<WorkItemDto> extractedItems, List<WorkItemLinkGroupDto> extractedLinks) {
-        Long sourceConnectionId = sourceConnection.getId();
+    public void replaceForWorkspace(Workspace workspace, List<WorkItemDto> extractedItems, List<WorkItemLinkGroupDto> extractedLinks) {
+        Long workspaceId = workspace.getId();
 
-        // work_item_link가 work_item을 참조하므로 링크를 먼저 정리한다.
-        workItemLinkRepository.deleteBySourceConnectionId(sourceConnectionId);
-        workItemRepository.deleteBySourceConnectionId(sourceConnectionId);
+        Map<SourceType, SourceConnection> connectionsByType = sourceConnectionRepository.findByWorkspaceId(workspaceId).stream()
+                .collect(Collectors.toMap(SourceConnection::getSourceType, Function.identity(), (existing, duplicate) -> existing));
 
-        Map<Integer, Long> indexToId = saveWorkItems(sourceConnection, extractedItems);
+        workItemLinkRepository.deleteByWorkspaceId(workspaceId);
+        workItemRepository.deleteByWorkspaceId(workspaceId);
+
+        Map<Integer, Long> indexToId = saveWorkItems(workspace, connectionsByType, extractedItems);
         saveWorkItemLinks(extractedLinks, indexToId);
     }
 
-    private Map<Integer, Long> saveWorkItems(SourceConnection sourceConnection, List<WorkItemDto> extractedItems) {
+    private Map<Integer, Long> saveWorkItems(Workspace workspace, Map<SourceType, SourceConnection> connectionsByType,
+            List<WorkItemDto> extractedItems) {
         Map<Integer, Long> indexToId = new HashMap<>();
 
         for (int i = 0; i < extractedItems.size(); i++) {
             WorkItemDto dto = extractedItems.get(i);
+            SourceType sourceType = SourceType.fromValue(dto.getSourceType());
+            SourceConnection sourceConnection = connectionsByType.get(sourceType);
+            if (sourceConnection == null) {
+                // 이 워크스페이스에 더 이상 연결되어 있지 않은 소스 타입의 잔여 색인 데이터 -> 건너뜀
+                continue;
+            }
 
             WorkItem workItem = WorkItem.builder()
-                    .workspace(sourceConnection.getWorkspace())
+                    .workspace(workspace)
                     .sourceConnection(sourceConnection)
-                    .sourceType(SourceType.fromValue(dto.getSourceType()))
+                    .sourceType(sourceType)
                     .itemType(dto.getItemType())
                     .sourceNumber(dto.getSourceNumber())
                     .title(dto.getTitle())

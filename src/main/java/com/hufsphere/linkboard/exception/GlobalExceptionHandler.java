@@ -27,6 +27,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(NotionNotConnectedException.class)
+    public ResponseEntity<ErrorResponse> handleNotionNotConnected(NotionNotConnectedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(SourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleSourceNotFound(SourceNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
