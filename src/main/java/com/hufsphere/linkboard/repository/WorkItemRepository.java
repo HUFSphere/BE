@@ -11,5 +11,6 @@ public interface WorkItemRepository extends JpaRepository<WorkItem, Long> {
     List<WorkItem> findByWorkspaceIdAndSourceType(Long workspaceId, SourceType sourceType);
     List<WorkItem> findBySourceConnectionId(Long sourceConnectionId);
     void deleteBySourceConnectionId(Long sourceConnectionId);
+    void deleteByWorkspaceId(Long workspaceId);
     long countBySourceConnectionId(Long sourceConnectionId);
 }

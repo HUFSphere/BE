@@ -1,20 +1,23 @@
 package com.hufsphere.linkboard.service;
 
 import com.hufsphere.linkboard.client.AiServerClient;
+import com.hufsphere.linkboard.client.NotionCrawlerClient;
 import com.hufsphere.linkboard.client.dto.ExtractWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.FigmaComment;
 import com.hufsphere.linkboard.client.dto.LinkWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.NotionPage;
+import com.hufsphere.linkboard.domain.NotionConnection;
 import com.hufsphere.linkboard.domain.SourceConnection;
 import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.dto.request.FigmaCommentRequest;
-import com.hufsphere.linkboard.dto.request.NotionPageRequest;
 import com.hufsphere.linkboard.dto.request.SourceSyncRequest;
 import com.hufsphere.linkboard.dto.response.SourceSyncResponse;
 import com.hufsphere.linkboard.exception.InvalidSyncPayloadException;
+import com.hufsphere.linkboard.exception.NotionNotConnectedException;
 import com.hufsphere.linkboard.exception.SourceFetchFailedException;
 import com.hufsphere.linkboard.exception.SourceNotFoundException;
 import com.hufsphere.linkboard.exception.SyncAlreadyRunningException;
+import com.hufsphere.linkboard.repository.NotionConnectionRepository;
 import com.hufsphere.linkboard.repository.SourceConnectionRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,9 +31,12 @@ public class SourceSyncService {
     private static final int INGEST_MONTHS = 3;
     private static final int LINK_TOP_K = 4;
     private static final String DEFAULT_LANG = "ko";
+    private static final String NOTION_DEFAULT_ITEM_TYPE = "meeting";
 
     private final SourceConnectionRepository sourceConnectionRepository;
+    private final NotionConnectionRepository notionConnectionRepository;
     private final AiServerClient aiServerClient;
+    private final NotionCrawlerClient notionCrawlerClient;
     private final WorkItemSyncService workItemSyncService;
 
     public SourceSyncResponse sync(Long sourceId, SourceSyncRequest request) {
@@ -49,7 +55,8 @@ public class SourceSyncService {
 
         try {
             ingest(sourceConnection, request);
-            if (sourceConnection.getSourceType() == SourceType.GITHUB) {
+            if (sourceConnection.getSourceType() == SourceType.GITHUB
+                    || sourceConnection.getSourceType() == SourceType.NOTION) {
                 syncWorkItems(sourceConnection);
             }
         } catch (SourceFetchFailedException e) {
@@ -66,17 +73,12 @@ public class SourceSyncService {
 
     private void validatePayload(SourceConnection sourceConnection, SourceSyncRequest request) {
         switch (sourceConnection.getSourceType()) {
-            case NOTION -> {
-                if (request == null || request.getPages() == null || request.getPages().isEmpty()) {
-                    throw new InvalidSyncPayloadException("notion 동기화에는 pages가 필요합니다");
-                }
-            }
             case FIGMA -> {
                 if (request == null || request.getComments() == null || request.getComments().isEmpty()) {
                     throw new InvalidSyncPayloadException("figma 동기화에는 comments가 필요합니다");
                 }
             }
-            case GITHUB -> {
+            case GITHUB, NOTION -> {
             }
         }
     }
@@ -84,9 +86,25 @@ public class SourceSyncService {
     private void ingest(SourceConnection sourceConnection, SourceSyncRequest request) {
         switch (sourceConnection.getSourceType()) {
             case GITHUB -> aiServerClient.ingestGithub(sourceConnection.getSourceRef(), INGEST_MONTHS);
-            case NOTION -> aiServerClient.ingestNotion(toNotionPages(request.getPages()));
+            case NOTION -> aiServerClient.ingestNotion(crawlNotionPages(sourceConnection));
             case FIGMA -> aiServerClient.ingestFigma(toFigmaComments(request.getComments()));
         }
+    }
+
+    private List<NotionPage> crawlNotionPages(SourceConnection sourceConnection) {
+        Long workspaceId = sourceConnection.getWorkspace().getId();
+        NotionConnection notionConnection = notionConnectionRepository
+                .findFirstByWorkspaceIdOrderByCreatedAtDesc(workspaceId)
+                .orElseThrow(() -> new NotionNotConnectedException("먼저 Notion을 연결해주세요"));
+
+        String accessToken = notionConnection.getAccessToken();
+        return notionCrawlerClient.searchPages(accessToken).stream()
+                .map(page -> new NotionPage(
+                        page.getTitle(),
+                        page.getUrl(),
+                        notionCrawlerClient.fetchPageText(accessToken, page.getId()),
+                        NOTION_DEFAULT_ITEM_TYPE))
+                .toList();
     }
 
     private void syncWorkItems(SourceConnection sourceConnection) {
@@ -95,7 +113,7 @@ public class SourceSyncService {
         ExtractWorkItemsResponse extracted = aiServerClient.extractWorkItems(lang);
         LinkWorkItemsResponse linked = aiServerClient.linkWorkItems(lang, LINK_TOP_K);
 
-        workItemSyncService.replace(sourceConnection, extracted.getWorkItems(), linked.getLinks());
+        workItemSyncService.replaceForWorkspace(sourceConnection.getWorkspace(), extracted.getWorkItems(), linked.getLinks());
     }
 
     private String resolveLang(SourceConnection sourceConnection) {
@@ -103,12 +121,6 @@ public class SourceSyncService {
                 ? sourceConnection.getWorkspace().getDefaultLanguage()
                 : null;
         return defaultLanguage != null && !defaultLanguage.isBlank() ? defaultLanguage : DEFAULT_LANG;
-    }
-
-    private List<NotionPage> toNotionPages(List<NotionPageRequest> pages) {
-        return pages.stream()
-                .map(page -> new NotionPage(page.getTitle(), page.getUrl(), page.getText(), page.getItemType()))
-                .toList();
     }
 
     private List<FigmaComment> toFigmaComments(List<FigmaCommentRequest> comments) {

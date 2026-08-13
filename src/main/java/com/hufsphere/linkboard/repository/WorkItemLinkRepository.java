@@ -20,4 +20,11 @@ public interface WorkItemLinkRepository extends JpaRepository<WorkItemLink, Long
     @Query("DELETE FROM WorkItemLink l WHERE l.fromWorkItem.sourceConnection.id = :sourceConnectionId "
             + "OR l.toWorkItem.sourceConnection.id = :sourceConnectionId")
     void deleteBySourceConnectionId(@Param("sourceConnectionId") Long sourceConnectionId);
+
+    // AI의 /extract-work-items·/link-work-items는 소스 하나가 아니라 워크스페이스 전체 색인을 대상으로
+    // 응답하므로(다중 소스 간 링크 포함), 재동기화 시에는 워크스페이스 단위로 통째로 갈아끼운다.
+    @Modifying
+    @Query("DELETE FROM WorkItemLink l WHERE l.fromWorkItem.workspace.id = :workspaceId "
+            + "OR l.toWorkItem.workspace.id = :workspaceId")
+    void deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }
