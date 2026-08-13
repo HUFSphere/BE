@@ -59,7 +59,9 @@ public class SourceSyncService {
                     || sourceConnection.getSourceType() == SourceType.NOTION) {
                 syncWorkItems(sourceConnection);
             }
-        } catch (SourceFetchFailedException e) {
+        } catch (Exception e) {
+            // 어떤 예외든(예상 못한 NPE·파싱 오류 포함) SYNCING에 영구히 멈추지 않도록
+            // 상태를 failed로 되돌린 뒤 원래 예외를 그대로 다시 던진다 (응답 계약은 그대로 유지).
             sourceConnection.failSyncing();
             sourceConnectionRepository.save(sourceConnection);
             throw e;
