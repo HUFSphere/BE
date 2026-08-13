@@ -91,7 +91,7 @@ public class WorkItemService {
     ) {
         List<WorkItem> workItems;
         if (sourceType != null && !sourceType.isBlank()) {
-            SourceType type = SourceType.valueOf(sourceType.toLowerCase());
+            SourceType type = SourceType.fromValue(sourceType);
             workItems = workItemRepository.findByWorkspaceIdAndSourceType(workspaceId, type);
         } else {
             workItems = workItemRepository.findByWorkspaceId(workspaceId);

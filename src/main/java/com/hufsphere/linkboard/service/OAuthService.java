@@ -7,7 +7,7 @@ import com.hufsphere.linkboard.dto.response.GoogleTokenResponse;
 import com.hufsphere.linkboard.dto.response.GoogleUserInfo;
 import com.hufsphere.linkboard.dto.response.OAuthLoginResponse;
 import com.hufsphere.linkboard.repository.AppUserRepository;
-import com.hufsphere.linkboard.security.JwtTokenProvider;
+import com.hufsphere.linkboard.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +18,7 @@ public class OAuthService {
 
     private final AppUserRepository appUserRepository;
     private final GoogleOAuthClient googleOAuthClient;
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtProvider jwtProvider;
 
     @Transactional
     public OAuthLoginResponse loginOrSignup(OAuthLoginRequest request) {
@@ -51,22 +51,22 @@ public class OAuthService {
 
         if (isNewUser) {
             user = appUserRepository.save(
-                    new AppUser(
-                            userInfo.name(),
-                            "google",
-                            userInfo.sub(),
-                            nativeLang
-                    )
+                    AppUser.builder()
+                            .name(userInfo.name())
+                            .oauthProvider("google")
+                            .oauthSubject(userInfo.sub())
+                            .nativeLang(nativeLang)
+                            .build()
             );
         } else {
             user = existingUser;
         }
 
         String accessToken =
-                jwtTokenProvider.createAccessToken(user.getId());
+                jwtProvider.generateAccessToken(user.getId(), user.getName());
 
         String refreshToken =
-                jwtTokenProvider.createRefreshToken(user.getId());
+                jwtProvider.generateRefreshToken(user.getId(), user.getName());
 
         return new OAuthLoginResponse(
                 user.getId(),

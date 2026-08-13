@@ -31,7 +31,7 @@ public class SourceConnectionService {
 
         SourceConnection connection = SourceConnection.builder()
                 .workspace(workspace)
-                .sourceType(SourceType.valueOf(request.getSourceType()))
+                .sourceType(SourceType.fromValue(request.getSourceType()))
                 .targetRepoOrBoard(request.getTargetRepoOrBoard())
                 .status("CONNECTED")
                 .build();
