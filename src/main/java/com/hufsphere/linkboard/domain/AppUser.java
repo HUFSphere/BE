@@ -14,9 +14,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// 일반 회원가입(username+password)과 소셜 로그인(oauthProvider+oauthSubject) 두 가입 경로를
-// 하나의 계정 테이블로 수용한다. 소셜 로그인(1.0/1.1)은 다른 팀원이 별도로 구현 중 —
-// username/password는 그쪽 계정에서 비어있을 수 있어 nullable로 둔다.
+// 일반 회원가입(username+password, 1.6/1.7)과 소셜 로그인(oauthProvider+oauthSubject, 1.0/1.1)
+// 두 가입 경로를 하나의 계정 테이블로 수용한다. 각 경로 전용 컬럼은 반대쪽 경로로 만든
+// 계정에서는 비어있을 수 있어 nullable로 둔다.
 @Entity
 @Table(name = "app_user", uniqueConstraints = {
         @UniqueConstraint(name = "uk_app_user_oauth", columnNames = {"oauth_provider", "oauth_subject"})
@@ -39,7 +39,7 @@ public class AppUser {
     @Column(length = 100)
     private String password;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 50)
     private String name;
 
     @Column(name = "native_lang", nullable = false, length = 10)
@@ -50,7 +50,7 @@ public class AppUser {
     private String oauthProvider;
 
     // 제공자별 사용자 고유 식별자 (oauthProvider + oauthSubject 조합으로 사용자 식별)
-    @Column(name = "oauth_subject", length = 100)
+    @Column(name = "oauth_subject", length = 255)
     private String oauthSubject;
 
     @Column(name = "created_at", nullable = false, updatable = false)
