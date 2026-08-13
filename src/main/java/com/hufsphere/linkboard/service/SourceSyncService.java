@@ -1,9 +1,12 @@
 package com.hufsphere.linkboard.service;
 
 import com.hufsphere.linkboard.client.AiServerClient;
+import com.hufsphere.linkboard.client.dto.ExtractWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.FigmaComment;
+import com.hufsphere.linkboard.client.dto.LinkWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.NotionPage;
 import com.hufsphere.linkboard.domain.SourceConnection;
+import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.dto.request.FigmaCommentRequest;
 import com.hufsphere.linkboard.dto.request.NotionPageRequest;
 import com.hufsphere.linkboard.dto.request.SourceSyncRequest;
@@ -23,9 +26,12 @@ import org.springframework.stereotype.Service;
 public class SourceSyncService {
 
     private static final int INGEST_MONTHS = 3;
+    private static final int LINK_TOP_K = 4;
+    private static final String DEFAULT_LANG = "ko";
 
     private final SourceConnectionRepository sourceConnectionRepository;
     private final AiServerClient aiServerClient;
+    private final WorkItemSyncService workItemSyncService;
 
     public SourceSyncResponse sync(Long sourceId, SourceSyncRequest request) {
         SourceConnection sourceConnection = sourceConnectionRepository.findById(sourceId)
@@ -43,6 +49,9 @@ public class SourceSyncService {
 
         try {
             ingest(sourceConnection, request);
+            if (sourceConnection.getSourceType() == SourceType.GITHUB) {
+                syncWorkItems(sourceConnection);
+            }
         } catch (SourceFetchFailedException e) {
             sourceConnection.failSyncing();
             sourceConnectionRepository.save(sourceConnection);
@@ -78,6 +87,22 @@ public class SourceSyncService {
             case NOTION -> aiServerClient.ingestNotion(toNotionPages(request.getPages()));
             case FIGMA -> aiServerClient.ingestFigma(toFigmaComments(request.getComments()));
         }
+    }
+
+    private void syncWorkItems(SourceConnection sourceConnection) {
+        String lang = resolveLang(sourceConnection);
+
+        ExtractWorkItemsResponse extracted = aiServerClient.extractWorkItems(lang);
+        LinkWorkItemsResponse linked = aiServerClient.linkWorkItems(lang, LINK_TOP_K);
+
+        workItemSyncService.replace(sourceConnection, extracted.getWorkItems(), linked.getLinks());
+    }
+
+    private String resolveLang(SourceConnection sourceConnection) {
+        String defaultLanguage = sourceConnection.getWorkspace() != null
+                ? sourceConnection.getWorkspace().getDefaultLanguage()
+                : null;
+        return defaultLanguage != null && !defaultLanguage.isBlank() ? defaultLanguage : DEFAULT_LANG;
     }
 
     private List<NotionPage> toNotionPages(List<NotionPageRequest> pages) {
