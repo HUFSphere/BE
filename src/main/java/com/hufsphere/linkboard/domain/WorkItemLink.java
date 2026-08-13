@@ -1,6 +1,7 @@
 package com.hufsphere.linkboard.domain;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import lombok.*;
 
 @Entity
@@ -24,4 +25,17 @@ public class WorkItemLink {
     private WorkItem toWorkItem;
 
     private String linkSource;
+    private String linkReason;
+    private Long createdBy;
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.linkSource == null) {
+            this.linkSource = "auto";
+        }
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+    }
 }

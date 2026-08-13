@@ -2,11 +2,15 @@ package com.hufsphere.linkboard.client;
 
 import com.hufsphere.linkboard.client.dto.AskRequest;
 import com.hufsphere.linkboard.client.dto.AskResponse;
+import com.hufsphere.linkboard.client.dto.ExtractWorkItemsRequest;
+import com.hufsphere.linkboard.client.dto.ExtractWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.FigmaComment;
 import com.hufsphere.linkboard.client.dto.FigmaIngestRequest;
 import com.hufsphere.linkboard.client.dto.FigmaIngestResponse;
 import com.hufsphere.linkboard.client.dto.GithubIngestRequest;
 import com.hufsphere.linkboard.client.dto.GithubIngestResponse;
+import com.hufsphere.linkboard.client.dto.LinkWorkItemsRequest;
+import com.hufsphere.linkboard.client.dto.LinkWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.NotionIngestRequest;
 import com.hufsphere.linkboard.client.dto.NotionIngestResponse;
 import com.hufsphere.linkboard.client.dto.NotionPage;
@@ -60,6 +64,32 @@ public class AiServerClient {
                     .body(FigmaIngestResponse.class);
         } catch (RestClientException e) {
             throw new SourceFetchFailedException("외부 소스 조회에 실패했습니다");
+        }
+    }
+
+    public ExtractWorkItemsResponse extractWorkItems(String lang) {
+        try {
+            return aiServerRestClient.post()
+                    .uri("/extract-work-items")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new ExtractWorkItemsRequest(lang))
+                    .retrieve()
+                    .body(ExtractWorkItemsResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("작업 추출에 실패했습니다");
+        }
+    }
+
+    public LinkWorkItemsResponse linkWorkItems(String lang, int topK) {
+        try {
+            return aiServerRestClient.post()
+                    .uri("/link-work-items")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new LinkWorkItemsRequest(lang, topK))
+                    .retrieve()
+                    .body(LinkWorkItemsResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("작업 연결에 실패했습니다");
         }
     }
 
