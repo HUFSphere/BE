@@ -28,7 +28,8 @@ public class MapResponse {
         private Long sourceNumber;
         private String title;
         private String status;
-        private String summaryNative;
+        // WorkItem.summaryNative 컬럼에 저장된 값 (AI가 준 summary_brief를 그대로 담고 있음)
+        private String summaryBrief;
         private String authorLogin;
         private String sourceUrl;
         private LocalDateTime sourceUpdatedAt;
@@ -42,5 +43,6 @@ public class MapResponse {
         private Long fromWorkItemId;
         private Long toWorkItemId;
         private String linkSource;
+        private String linkReason;
     }
 }

@@ -4,8 +4,10 @@ import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.domain.WorkItem;
 import com.hufsphere.linkboard.domain.WorkItemLink;
 import com.hufsphere.linkboard.dto.MapResponse;
+import com.hufsphere.linkboard.exception.WorkspaceNotFoundException;
 import com.hufsphere.linkboard.repository.WorkItemLinkRepository;
 import com.hufsphere.linkboard.repository.WorkItemRepository;
+import com.hufsphere.linkboard.repository.WorkspaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,14 +20,19 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class MapService {
 
+    private final WorkspaceRepository workspaceRepository;
     private final WorkItemRepository workItemRepository;
     private final WorkItemLinkRepository workItemLinkRepository;
 
     public MapResponse getProjectMap(Long workspaceId, String lang, String sourceType) {
+        if (!workspaceRepository.existsById(workspaceId)) {
+            throw new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다");
+        }
+
         // 1. sourceType 필터링 조건에 따른 WorkItem(노드) 조회
         List<WorkItem> workItems;
         if (sourceType != null && !sourceType.isBlank()) {
-            SourceType type = SourceType.valueOf(sourceType.toLowerCase());
+            SourceType type = SourceType.fromValue(sourceType);
             workItems = workItemRepository.findByWorkspaceIdAndSourceType(workspaceId, type);
         } else {
             workItems = workItemRepository.findByWorkspaceId(workspaceId);
@@ -40,20 +47,22 @@ public class MapService {
                         .sourceNumber(item.getSourceNumber())
                         .title(item.getTitle())
                         .status(item.getStatus())
-                        .summaryNative(item.getSummaryNative())
+                        .summaryBrief(item.getSummaryNative())
                         .authorLogin(item.getAuthorLogin())
                         .sourceUrl(item.getSourceUrl())
                         .sourceUpdatedAt(item.getSourceUpdatedAt())
                         .build())
                 .collect(Collectors.toList());
 
-        // 3. WorkItemLink(연결선) 조회 및 DTO 변환
-        List<WorkItemLink> workItemLinks = workItemLinkRepository.findByFromWorkItemWorkspaceId(workspaceId);
+        // 3. WorkItemLink(연결선) 조회 및 DTO 변환 (from/to 둘 다 이 워크스페이스에 속한 것만)
+        List<WorkItemLink> workItemLinks =
+                workItemLinkRepository.findByFromWorkItemWorkspaceIdAndToWorkItemWorkspaceId(workspaceId, workspaceId);
         List<MapResponse.LinkResponse> links = workItemLinks.stream()
                 .map(link -> MapResponse.LinkResponse.builder()
                         .fromWorkItemId(link.getFromWorkItem().getId())
                         .toWorkItemId(link.getToWorkItem().getId())
                         .linkSource(link.getLinkSource())
+                        .linkReason(link.getLinkReason())
                         .build())
                 .collect(Collectors.toList());
 
