@@ -5,10 +5,12 @@ import com.hufsphere.linkboard.common.ErrorResponse;
 import com.hufsphere.linkboard.dto.request.LoginRequest;
 import com.hufsphere.linkboard.dto.request.OAuthLoginRequest;
 import com.hufsphere.linkboard.dto.request.SignupRequest;
+import com.hufsphere.linkboard.dto.request.UpdateMyInfoRequest;
 import com.hufsphere.linkboard.dto.response.LoginResponse;
 import com.hufsphere.linkboard.dto.response.MyInfoResponse;
 import com.hufsphere.linkboard.dto.response.OAuthLoginResponse;
 import com.hufsphere.linkboard.dto.response.SignupResponse;
+import com.hufsphere.linkboard.dto.response.UpdateMyInfoResponse;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
 import com.hufsphere.linkboard.security.JwtProvider;
 import com.hufsphere.linkboard.service.AuthService;
@@ -27,6 +29,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -294,21 +297,10 @@ public class AuthController {
             @RequestHeader(value = "Authorization", required = false)
             String authorization
     ) {
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            throw new InvalidCredentialsException("로그인이 필요합니다");
-        }
+        Long userId = extractUserId(authorization);
 
-        String token = authorization.substring(7);
-
-        Long userId;
-
-        try {
-            userId = jwtProvider.getUserIdFromToken(token);
-        } catch (Exception ex) {
-            throw new InvalidCredentialsException("로그인이 필요합니다");
-        }
-
-        MyInfoResponse response = authService.getMyInfo(userId);
+        MyInfoResponse response =
+                authService.getMyInfo(userId);
 
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -317,5 +309,98 @@ public class AuthController {
                         response
                 )
         );
+    }
+
+    @Operation(
+            summary = "내 정보 수정",
+            description = "로그인한 사용자의 표시명 또는 모국어를 수정한다.",
+            parameters = {
+                    @Parameter(
+                            name = "Authorization",
+                            description = "Bearer Access Token",
+                            required = true,
+                            example = "Bearer eyJhbGciOi..."
+                    )
+            }
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "내 정보 수정 성공",
+                    content = @Content(
+                            schema = @Schema(implementation = UpdateMyInfoResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "code": "ME_UPDATED",
+                                      "message": "내 정보가 수정되었습니다",
+                                      "data": {
+                                        "userId": 1,
+                                        "name": "Linh Nguyen",
+                                        "nativeLang": "ko"
+                                      }
+                                    }""")
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "지원하지 않는 언어",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-08-09T17:02:00.000+00:00",
+                                      "status": 400,
+                                      "error": "Bad Request",
+                                      "message": "nativeLang은 ko, vi, en 중 하나여야 합니다",
+                                      "path": "/api/v1/auth/me"
+                                    }""")
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "미인증"
+            )
+    })
+    @PatchMapping("/me")
+    public ResponseEntity<ApiResponse<UpdateMyInfoResponse>> updateMyInfo(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @RequestBody UpdateMyInfoRequest request
+    ) {
+        Long userId = extractUserId(authorization);
+
+        UpdateMyInfoResponse response =
+                authService.updateMyInfo(
+                        userId,
+                        request
+                );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "ME_UPDATED",
+                        "내 정보가 수정되었습니다",
+                        response
+                )
+        );
+    }
+
+    private Long extractUserId(String authorization) {
+        if (authorization == null
+                || !authorization.startsWith("Bearer ")) {
+            throw new InvalidCredentialsException(
+                    "로그인이 필요합니다"
+            );
+        }
+
+        String token = authorization.substring(7);
+
+        try {
+            return jwtProvider.getUserIdFromToken(token);
+        } catch (Exception ex) {
+            throw new InvalidCredentialsException(
+                    "로그인이 필요합니다"
+            );
+        }
     }
 }
