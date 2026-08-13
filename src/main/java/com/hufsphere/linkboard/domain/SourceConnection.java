@@ -1,75 +1,68 @@
 package com.hufsphere.linkboard.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.*;
+
 import java.time.LocalDateTime;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "source_connection")
+@Table(name = "source_connections")
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 public class SourceConnection {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "workspace_id", nullable = false)
-    private Long workspaceId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workspace_id")
+    private Workspace workspace;
 
-    @Column(name = "source_type", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
     private SourceType sourceType;
 
-    @Column(name = "source_ref", nullable = false, length = 500)
-    private String sourceRef;
+    private String status;
 
-    @Column(name = "conn_status", nullable = false, length = 20)
-    private ConnStatus connStatus;
+    private String targetRepoOrBoard;
 
-    @Column(name = "last_synced_at")
     private LocalDateTime lastSyncedAt;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Builder
-    private SourceConnection(Long workspaceId, SourceType sourceType, String sourceRef) {
-        this.workspaceId = workspaceId;
-        this.sourceType = sourceType;
-        this.sourceRef = sourceRef;
-        this.connStatus = ConnStatus.PENDING;
+    @PrePersist
+    public void prePersist() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+        if (this.status == null) {
+            this.status = "CONNECTED";
+        }
     }
 
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
+    // --- SourceSyncService에서 필요한 편의 메서드들 ---
+
+    public String getSourceRef() {
+        return this.targetRepoOrBoard;
     }
 
     public boolean isSyncInProgress() {
-        return connStatus == ConnStatus.COLLECTING
-                || connStatus == ConnStatus.INDEXING
-                || connStatus == ConnStatus.SUMMARIZING;
+        return "SYNCING".equalsIgnoreCase(this.status);
     }
 
     public void startSyncing() {
-        this.connStatus = ConnStatus.COLLECTING;
-    }
-
-    public void completeSyncing(LocalDateTime syncedAt) {
-        this.connStatus = ConnStatus.DONE;
-        this.lastSyncedAt = syncedAt;
+        this.status = "SYNCING";
     }
 
     public void failSyncing() {
-        this.connStatus = ConnStatus.FAILED;
+        this.status = "FAILED";
+    }
+
+    public void completeSyncing(LocalDateTime syncedAt) {
+        this.status = "CONNECTED";
+        this.lastSyncedAt = syncedAt;
     }
 }
