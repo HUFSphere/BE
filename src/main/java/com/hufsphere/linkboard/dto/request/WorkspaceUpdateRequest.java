@@ -7,9 +7,9 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class SourceConnectionCreateRequest {
+public class WorkspaceUpdateRequest {
 
-    private String sourceType;
-    private String targetRepoOrBoard;
-    private String accessToken;
+    private String name;
+    private String description;
+    private String defaultLanguage;
 }
