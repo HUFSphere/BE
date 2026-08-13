@@ -1,12 +1,12 @@
 package com.hufsphere.linkboard.repository;
 
-import com.hufsphere.linkboard.domain.User;
+import com.hufsphere.linkboard.domain.AppUser;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
-    Optional<User> findByUsername(String username);
+    Optional<AppUser> findByUsername(String username);
 
     boolean existsByUsername(String username);
 }

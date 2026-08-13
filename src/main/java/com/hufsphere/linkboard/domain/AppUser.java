@@ -23,7 +23,7 @@ import lombok.NoArgsConstructor;
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User {
+public class AppUser {
 
     private static final String DEFAULT_NATIVE_LANG = "ko";
 
@@ -57,7 +57,7 @@ public class User {
     private LocalDateTime createdAt;
 
     @Builder
-    private User(String username, String password, String name, String nativeLang,
+    private AppUser(String username, String password, String name, String nativeLang,
             String oauthProvider, String oauthSubject) {
         this.username = username;
         this.password = password;

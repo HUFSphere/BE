@@ -1,6 +1,6 @@
 package com.hufsphere.linkboard.dto.response;
 
-import com.hufsphere.linkboard.domain.User;
+import com.hufsphere.linkboard.domain.AppUser;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -27,7 +27,7 @@ public class SignupResponse {
     @Schema(description = "가입 시각", example = "2026-08-12T10:00:00")
     private final LocalDateTime createdAt;
 
-    public static SignupResponse from(User user) {
+    public static SignupResponse from(AppUser user) {
         return new SignupResponse(user.getId(), user.getUsername(), user.getName(), user.getNativeLang(), user.getCreatedAt());
     }
 }

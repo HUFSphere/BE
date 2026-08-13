@@ -1,6 +1,6 @@
 package com.hufsphere.linkboard.dto.response;
 
-import com.hufsphere.linkboard.domain.User;
+import com.hufsphere.linkboard.domain.AppUser;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -29,7 +29,7 @@ public class LoginResponse {
     @Schema(description = "리프레시 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6...")
     private final String refreshToken;
 
-    public static LoginResponse of(User user, String accessToken, String refreshToken) {
+    public static LoginResponse of(AppUser user, String accessToken, String refreshToken) {
         return new LoginResponse(user.getId(), user.getUsername(), user.getName(), user.getNativeLang(), accessToken, refreshToken);
     }
 }
