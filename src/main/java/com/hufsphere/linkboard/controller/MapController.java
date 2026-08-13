@@ -1,14 +1,18 @@
 package com.hufsphere.linkboard.controller;
 
+import com.hufsphere.linkboard.common.ApiResponse;
 import com.hufsphere.linkboard.dto.MapResponse;
 import com.hufsphere.linkboard.service.MapService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Map", description = "프로젝트 지도 API")
 @RestController
@@ -18,21 +22,14 @@ public class MapController {
 
     private final MapService mapService;
 
-    @Operation(summary = "프로젝트 지도 조회", description = "워크스페이스의 지도 노드 및 링크 정보를 조회합니다.")
+    @Operation(summary = "프로젝트 지도 조회", description = "워크스페이스의 work_item(노드)과 work_item_link(연결)를 조회한다. 좌표/레이아웃 계산은 프론트엔드 몫이며 BE는 노드·링크 데이터만 내려준다.")
     @GetMapping
-    public ResponseEntity<?> getProjectMap(
+    public ResponseEntity<ApiResponse<MapResponse>> getProjectMap(
             @PathVariable Long workspaceId,
-            @RequestParam(required = false) String lang,
-            @RequestParam(required = false) String sourceType
+            @Parameter(description = "요약 언어. 없으면 워크스페이스 기본 언어") @RequestParam(required = false) String lang,
+            @Parameter(description = "소스 필터 (github/notion/figma). 없으면 전체") @RequestParam(required = false) String sourceType
     ) {
         MapResponse mapResponse = mapService.getProjectMap(workspaceId, lang, sourceType);
-
-        // 명세서 규격에 맞춘 공통 응답 객체 구성
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "code", "MAP_OK",
-                "message", "프로젝트 지도 조회 성공",
-                "data", mapResponse
-        ));
+        return ResponseEntity.ok(ApiResponse.success("MAP_OK", "프로젝트 지도 조회 성공", mapResponse));
     }
 }

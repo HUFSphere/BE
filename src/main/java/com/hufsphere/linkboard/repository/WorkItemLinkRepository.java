@@ -10,7 +10,8 @@ import java.util.List;
 
 public interface WorkItemLinkRepository extends JpaRepository<WorkItemLink, Long> {
 
-    List<WorkItemLink> findByFromWorkItemWorkspaceId(Long workspaceId);
+    // from/to 둘 다 이 워크스페이스에 속한 work_item인 링크만 (한쪽만 걸리는 경우 제외)
+    List<WorkItemLink> findByFromWorkItemWorkspaceIdAndToWorkItemWorkspaceId(Long fromWorkspaceId, Long toWorkspaceId);
 
     // 특정 workItemId가 출발(from) 또는 도착(to)인 모든 연결 조회
     List<WorkItemLink> findByFromWorkItemIdOrToWorkItemId(Long fromId, Long toId);
