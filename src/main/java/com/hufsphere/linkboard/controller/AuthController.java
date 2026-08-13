@@ -6,8 +6,11 @@ import com.hufsphere.linkboard.dto.request.LoginRequest;
 import com.hufsphere.linkboard.dto.request.OAuthLoginRequest;
 import com.hufsphere.linkboard.dto.request.SignupRequest;
 import com.hufsphere.linkboard.dto.response.LoginResponse;
+import com.hufsphere.linkboard.dto.response.MyInfoResponse;
 import com.hufsphere.linkboard.dto.response.OAuthLoginResponse;
 import com.hufsphere.linkboard.dto.response.SignupResponse;
+import com.hufsphere.linkboard.exception.InvalidCredentialsException;
+import com.hufsphere.linkboard.security.JwtProvider;
 import com.hufsphere.linkboard.service.AuthService;
 import com.hufsphere.linkboard.service.OAuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -39,6 +43,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final OAuthService oAuthService;
+    private final JwtProvider jwtProvider;
 
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
     private String googleClientId;
@@ -88,13 +93,20 @@ public class AuthController {
                                       "error": "Conflict",
                                       "message": "이미 사용 중인 아이디입니다",
                                       "path": "/api/v1/auth/signup"
-                                    }"""))),
+                                    }""")))
     })
     @PostMapping("/signup")
-    public ResponseEntity<ApiResponse<SignupResponse>> signup(@Valid @RequestBody SignupRequest request) {
+    public ResponseEntity<ApiResponse<SignupResponse>> signup(
+            @Valid @RequestBody SignupRequest request
+    ) {
         SignupResponse response = authService.signup(request);
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("SIGNUP_SUCCESS", "회원가입이 완료되었습니다", response));
+                .body(ApiResponse.success(
+                        "SIGNUP_SUCCESS",
+                        "회원가입이 완료되었습니다",
+                        response
+                ));
     }
 
     @Operation(summary = "일반 로그인", description = "아이디/비밀번호로 로그인하고 액세스/리프레시 토큰을 발급한다.")
@@ -140,17 +152,29 @@ public class AuthController {
                                       "error": "Unauthorized",
                                       "message": "아이디 또는 비밀번호가 올바르지 않습니다",
                                       "path": "/api/v1/auth/login"
-                                    }"""))),
+                                    }""")))
     })
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<LoginResponse>> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
         LoginResponse response = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.success("LOGIN_SUCCESS", "로그인되었습니다", response));
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "LOGIN_SUCCESS",
+                        "로그인되었습니다",
+                        response
+                )
+        );
     }
 
     @Operation(summary = "소셜 로그인 시작", description = "지원하는 소셜 제공자의 로그인 페이지로 리다이렉트한다.")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "302", description = "소셜 로그인 페이지로 리다이렉트"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "302",
+                    description = "소셜 로그인 페이지로 리다이렉트"
+            ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
                     description = "미지원 제공자",
@@ -162,15 +186,17 @@ public class AuthController {
                                       "error": "Bad Request",
                                       "message": "지원하지 않는 소셜 제공자입니다 (github, google, kakao)",
                                       "path": "/api/v1/auth/oauth/xxx/authorize"
-                                    }"""))),
+                                    }""")))
     })
     @GetMapping("/oauth/{provider}/authorize")
     public ResponseEntity<Void> startOAuth(
-            @Parameter(description = "소셜 제공자 (github, google, kakao)", example = "google")
+            @Parameter(description = "소셜 제공자", example = "google")
             @PathVariable String provider
     ) {
         if (!provider.equalsIgnoreCase("google")) {
-            throw new IllegalArgumentException("지원하지 않는 소셜 제공자입니다 (github, google, kakao)");
+            throw new IllegalArgumentException(
+                    "지원하지 않는 소셜 제공자입니다 (github, google, kakao)"
+            );
         }
 
         String authorizationUrl = UriComponentsBuilder
@@ -188,7 +214,10 @@ public class AuthController {
                 .build();
     }
 
-    @Operation(summary = "OAuth 로그인/가입", description = "인가 코드로 소셜 로그인한다. 최초 로그인 시 자동으로 계정이 생성된다.")
+    @Operation(
+            summary = "OAuth 로그인/가입",
+            description = "인가 코드로 소셜 로그인한다. 최초 로그인 시 자동으로 계정이 생성된다."
+    )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
@@ -220,11 +249,73 @@ public class AuthController {
                                       "error": "Unauthorized",
                                       "message": "OAuth 인증에 실패했습니다. 인가 코드가 유효하지 않습니다",
                                       "path": "/api/v1/auth/oauth"
-                                    }"""))),
+                                    }""")))
     })
     @PostMapping("/oauth")
-    public ResponseEntity<ApiResponse<OAuthLoginResponse>> loginOAuth(@Valid @RequestBody OAuthLoginRequest request) {
-        OAuthLoginResponse response = oAuthService.loginOrSignup(request);
-        return ResponseEntity.ok(ApiResponse.success("LOGIN_SUCCESS", "로그인되었습니다", response));
+    public ResponseEntity<ApiResponse<OAuthLoginResponse>> loginOAuth(
+            @Valid @RequestBody OAuthLoginRequest request
+    ) {
+        OAuthLoginResponse response =
+                oAuthService.loginOrSignup(request);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "LOGIN_SUCCESS",
+                        "로그인되었습니다",
+                        response
+                )
+        );
+    }
+
+    @Operation(
+            summary = "내 정보 조회",
+            description = "Access Token을 이용해 로그인한 사용자의 정보를 조회한다.",
+            parameters = {
+                    @Parameter(
+                            name = "Authorization",
+                            description = "Bearer Access Token",
+                            required = true,
+                            example = "Bearer eyJhbGciOi..."
+                    )
+            }
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "내 정보 조회 성공"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "미인증"
+            )
+    })
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<MyInfoResponse>> getMyInfo(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization
+    ) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            throw new InvalidCredentialsException("로그인이 필요합니다");
+        }
+
+        String token = authorization.substring(7);
+
+        Long userId;
+
+        try {
+            userId = jwtProvider.getUserIdFromToken(token);
+        } catch (Exception ex) {
+            throw new InvalidCredentialsException("로그인이 필요합니다");
+        }
+
+        MyInfoResponse response = authService.getMyInfo(userId);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "ME_OK",
+                        "내 정보 조회 성공",
+                        response
+                )
+        );
     }
 }

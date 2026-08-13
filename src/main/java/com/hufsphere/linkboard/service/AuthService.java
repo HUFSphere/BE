@@ -4,6 +4,7 @@ import com.hufsphere.linkboard.domain.AppUser;
 import com.hufsphere.linkboard.dto.request.LoginRequest;
 import com.hufsphere.linkboard.dto.request.SignupRequest;
 import com.hufsphere.linkboard.dto.response.LoginResponse;
+import com.hufsphere.linkboard.dto.response.MyInfoResponse;
 import com.hufsphere.linkboard.dto.response.SignupResponse;
 import com.hufsphere.linkboard.exception.DuplicateUsernameException;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
@@ -42,15 +43,40 @@ public class AuthService {
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
         AppUser user = appUserRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new InvalidCredentialsException("아이디 또는 비밀번호가 올바르지 않습니다"));
+                .orElseThrow(() ->
+                        new InvalidCredentialsException("아이디 또는 비밀번호가 올바르지 않습니다")
+                );
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidCredentialsException("아이디 또는 비밀번호가 올바르지 않습니다");
         }
 
-        String accessToken = jwtProvider.generateAccessToken(user.getId(), user.getUsername());
-        String refreshToken = jwtProvider.generateRefreshToken(user.getId(), user.getUsername());
+        String accessToken =
+                jwtProvider.generateAccessToken(
+                        user.getId(),
+                        user.getUsername()
+                );
 
-        return LoginResponse.of(user, accessToken, refreshToken);
+        String refreshToken =
+                jwtProvider.generateRefreshToken(
+                        user.getId(),
+                        user.getUsername()
+                );
+
+        return LoginResponse.of(
+                user,
+                accessToken,
+                refreshToken
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public MyInfoResponse getMyInfo(Long userId) {
+        AppUser user = appUserRepository.findById(userId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("사용자를 찾을 수 없습니다")
+                );
+
+        return MyInfoResponse.from(user);
     }
 }
