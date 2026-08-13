@@ -42,6 +42,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_GATEWAY, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(NotionOAuthFailedException.class)
+    public ResponseEntity<ErrorResponse> handleNotionOAuthFailed(NotionOAuthFailedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_GATEWAY, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
         String message = ex.getBindingResult().getFieldErrors().stream()
