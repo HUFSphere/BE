@@ -1,45 +1,47 @@
 package com.hufsphere.linkboard.client;
 
-import com.hufsphere.linkboard.client.dto.AskRequest;
 import com.hufsphere.linkboard.client.dto.AskResponse;
-import com.hufsphere.linkboard.client.dto.GithubIngestRequest;
-import com.hufsphere.linkboard.client.dto.GithubIngestResponse;
-import com.hufsphere.linkboard.exception.SourceFetchFailedException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 public class AiServerClient {
 
-    private final RestClient aiServerRestClient;
+    private final RestTemplate restTemplate;
+    private final String aiServerUrl;
 
-    public GithubIngestResponse ingestGithub(String repo, int months) {
+    public AiServerClient(RestTemplate restTemplate, @Value("${ai.server.url:http://localhost:8000}") String aiServerUrl) {
+        this.restTemplate = restTemplate;
+        this.aiServerUrl = aiServerUrl;
+    }
+
+    public void triggerSync(Long sourceId, String sourceRef) {
+        String url = aiServerUrl + "/api/v1/sync";
+        Map<String, Object> request = Map.of(
+                "source_id", sourceId,
+                "source_ref", sourceRef != null ? sourceRef : ""
+        );
         try {
-            return aiServerRestClient.post()
-                    .uri("/ingest/github")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(new GithubIngestRequest(repo, months))
-                    .retrieve()
-                    .body(GithubIngestResponse.class);
-        } catch (RestClientException e) {
-            throw new SourceFetchFailedException("외부 소스 조회에 실패했습니다");
+            restTemplate.postForEntity(url, request, String.class);
+        } catch (Exception e) {
+            System.err.println("AI 서버 동기화 요청 실패: " + e.getMessage());
         }
     }
 
     public AskResponse ask(String question, String lang) {
+        String url = aiServerUrl + "/api/v1/qna";
+        Map<String, Object> request = Map.of(
+                "question", question,
+                "lang", lang != null ? lang : "ko"
+        );
         try {
-            return aiServerRestClient.post()
-                    .uri("/ask")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(new AskRequest(question, lang))
-                    .retrieve()
-                    .body(AskResponse.class);
-        } catch (RestClientException e) {
-            throw new SourceFetchFailedException("AI 서버 호출에 실패했습니다");
+            return restTemplate.postForObject(url, request, AskResponse.class);
+        } catch (Exception e) {
+            System.err.println("AI 서버 QnA 요청 실패: " + e.getMessage());
+            return new AskResponse();
         }
     }
 }

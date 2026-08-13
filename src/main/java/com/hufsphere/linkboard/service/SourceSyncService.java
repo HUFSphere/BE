@@ -4,24 +4,24 @@ import com.hufsphere.linkboard.client.AiServerClient;
 import com.hufsphere.linkboard.domain.SourceConnection;
 import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.dto.response.SourceSyncResponse;
-import com.hufsphere.linkboard.exception.SourceFetchFailedException;
 import com.hufsphere.linkboard.exception.SourceNotFoundException;
 import com.hufsphere.linkboard.exception.SyncAlreadyRunningException;
 import com.hufsphere.linkboard.exception.UnsupportedSourceSyncException;
 import com.hufsphere.linkboard.repository.SourceConnectionRepository;
-import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
 public class SourceSyncService {
 
-    private static final int INGEST_MONTHS = 3;
-
     private final SourceConnectionRepository sourceConnectionRepository;
     private final AiServerClient aiServerClient;
 
+    @Transactional
     public SourceSyncResponse sync(Long sourceId) {
         SourceConnection sourceConnection = sourceConnectionRepository.findById(sourceId)
                 .orElseThrow(() -> new SourceNotFoundException("소스 연결을 찾을 수 없습니다"));
@@ -39,15 +39,14 @@ public class SourceSyncService {
         sourceConnectionRepository.save(sourceConnection);
 
         try {
-            aiServerClient.ingestGithub(sourceConnection.getSourceRef(), INGEST_MONTHS);
-        } catch (SourceFetchFailedException e) {
+            aiServerClient.triggerSync(sourceId, sourceConnection.getSourceRef());
+            sourceConnection.completeSyncing(startedAt);
+        } catch (Exception e) {
             sourceConnection.failSyncing();
-            sourceConnectionRepository.save(sourceConnection);
             throw e;
+        } finally {
+            sourceConnectionRepository.save(sourceConnection);
         }
-
-        sourceConnection.completeSyncing(LocalDateTime.now());
-        sourceConnectionRepository.save(sourceConnection);
 
         return SourceSyncResponse.of(sourceConnection, startedAt);
     }

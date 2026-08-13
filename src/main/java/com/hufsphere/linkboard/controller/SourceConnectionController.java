@@ -1,8 +1,8 @@
 package com.hufsphere.linkboard.controller;
 
-import com.hufsphere.linkboard.dto.SourceConnectionResponse;
-import com.hufsphere.linkboard.dto.SourceSyncResponse;
 import com.hufsphere.linkboard.dto.request.SourceConnectionCreateRequest;
+import com.hufsphere.linkboard.dto.response.SourceConnectionResponse;
+import com.hufsphere.linkboard.dto.response.SourceSyncResponse;
 import com.hufsphere.linkboard.service.SourceConnectionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,64 +21,30 @@ public class SourceConnectionController {
 
     private final SourceConnectionService sourceConnectionService;
 
-    @Operation(summary = "출처 연동 목록 조회 (6.1)", description = "워크스페이스에 연동된 데이터 출처 목록을 조회합니다.")
-    @GetMapping
-    public ResponseEntity<?> getSourceConnections(@PathVariable Long workspaceId) {
-        List<SourceConnectionResponse> response = sourceConnectionService.getSourceConnections(workspaceId);
-
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "code", "SOURCE_CONN_OK",
-                "message", "출처 연동 목록 조회 성공",
-                "data", response
-        ));
-    }
-
-    @Operation(summary = "출처 연동 생성 (6.2)", description = "새로운 데이터 출처를 워크스페이스에 연동합니다.")
+    @Operation(summary = "연동 생성", description = "새로운 데이터 소스 연동을 추가합니다.")
     @PostMapping
     public ResponseEntity<?> createSourceConnection(
             @PathVariable Long workspaceId,
             @RequestBody SourceConnectionCreateRequest request
     ) {
-        SourceConnectionResponse response = sourceConnectionService.createSourceConnection(workspaceId, request);
-
-        return ResponseEntity.status(201).body(Map.of(
+        SourceConnectionResponse response = sourceConnectionService.createConnection(workspaceId, request);
+        return ResponseEntity.ok(Map.of(
                 "success", true,
-                "code", "SOURCE_CONN_CREATED",
-                "message", "출처 연동 생성 성공",
+                "code", "SOURCE_CONNECTION_CREATED",
+                "message", "데이터 출처 연동 성공",
                 "data", response
         ));
     }
 
-    @Operation(summary = "출처 수동 동기화 (6.3)", description = "지정한 데이터 출처의 수동 동기화를 요청합니다.")
-    @PostMapping("/{connectionId}/sync")
-    public ResponseEntity<?> triggerSync(
-            @PathVariable Long workspaceId,
-            @PathVariable Long connectionId
-    ) {
-        SourceSyncResponse response = sourceConnectionService.triggerSync(connectionId);
-
+    @Operation(summary = "연동 목록 조회", description = "워크스페이스의 데이터 출처 연동 목록을 조회합니다.")
+    @GetMapping
+    public ResponseEntity<?> getSourceConnections(@PathVariable Long workspaceId) {
+        List<SourceConnectionResponse> responses = sourceConnectionService.getConnections(workspaceId);
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "code", "SYNC_STARTED",
-                "message", "동기화가 성공적으로 시작되었습니다.",
-                "data", response
-        ));
-    }
-
-    @Operation(summary = "연동 상태 조회 (6.4)", description = "특정 데이터 출처 연동의 상세 상태 및 동기화 이력을 조회합니다.")
-    @GetMapping("/{connectionId}/status")
-    public ResponseEntity<?> getConnectionStatus(
-            @PathVariable Long workspaceId,
-            @PathVariable Long connectionId
-    ) {
-        SourceSyncResponse response = sourceConnectionService.getConnectionStatus(connectionId);
-
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "code", "STATUS_OK",
-                "message", "연동 상태 조회 성공",
-                "data", response
+                "code", "SOURCE_CONNECTION_LIST_OK",
+                "message", "데이터 출처 연동 목록 조회 성공",
+                "data", responses
         ));
     }
 }

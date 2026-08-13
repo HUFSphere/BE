@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
 
 @Configuration
 public class AiServerClientConfig {
@@ -12,7 +13,8 @@ public class AiServerClientConfig {
     private static final int CONNECT_TIMEOUT_MILLIS = 10_000;
     private static final int READ_TIMEOUT_MILLIS = 60_000;
 
-    @Value("${ai.server.url}")
+    // application.yml에 값이 없을 경우 기본값으로 http://localhost:8000 사용
+    @Value("${ai.server.url:http://localhost:8000}")
     private String aiServerUrl;
 
     @Bean
@@ -25,5 +27,10 @@ public class AiServerClientConfig {
                 .baseUrl(aiServerUrl)
                 .requestFactory(requestFactory)
                 .build();
+    }
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
     }
 }
