@@ -59,44 +59,18 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "201",
                     description = "회원가입 성공",
-                    content = @Content(schema = @Schema(implementation = SignupResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "success": true,
-                                      "code": "SIGNUP_SUCCESS",
-                                      "message": "회원가입이 완료되었습니다",
-                                      "data": {
-                                        "userId": 1,
-                                        "username": "jaeyoung123",
-                                        "name": "박재영",
-                                        "nativeLang": "ko",
-                                        "createdAt": "2026-08-12T10:00:00"
-                                      }
-                                    }"""))),
+                    content = @Content(schema = @Schema(implementation = SignupResponse.class))
+            ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
                     description = "입력값 검증 실패",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "timestamp": "2026-08-12T10:00:00.000+00:00",
-                                      "status": 400,
-                                      "error": "Bad Request",
-                                      "message": "비밀번호는 8자 이상이어야 합니다",
-                                      "path": "/api/v1/auth/signup"
-                                    }"""))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "409",
                     description = "아이디 중복",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "timestamp": "2026-08-12T10:00:00.000+00:00",
-                                      "status": 409,
-                                      "error": "Conflict",
-                                      "message": "이미 사용 중인 아이디입니다",
-                                      "path": "/api/v1/auth/signup"
-                                    }""")))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
     })
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<SignupResponse>> signup(
@@ -117,45 +91,18 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
                     description = "로그인 성공",
-                    content = @Content(schema = @Schema(implementation = LoginResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "success": true,
-                                      "code": "LOGIN_SUCCESS",
-                                      "message": "로그인되었습니다",
-                                      "data": {
-                                        "userId": 1,
-                                        "username": "jaeyoung123",
-                                        "name": "박재영",
-                                        "nativeLang": "ko",
-                                        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                                        "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6..."
-                                      }
-                                    }"""))),
+                    content = @Content(schema = @Schema(implementation = LoginResponse.class))
+            ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
                     description = "필수값 누락",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "timestamp": "2026-08-12T10:05:00.000+00:00",
-                                      "status": 400,
-                                      "error": "Bad Request",
-                                      "message": "username과 password는 필수입니다",
-                                      "path": "/api/v1/auth/login"
-                                    }"""))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
                     description = "인증 실패",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "timestamp": "2026-08-12T10:05:00.000+00:00",
-                                      "status": 401,
-                                      "error": "Unauthorized",
-                                      "message": "아이디 또는 비밀번호가 올바르지 않습니다",
-                                      "path": "/api/v1/auth/login"
-                                    }""")))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
     })
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(
@@ -181,15 +128,8 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
                     description = "미지원 제공자",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "timestamp": "2026-08-09T18:00:00.000+00:00",
-                                      "status": 400,
-                                      "error": "Bad Request",
-                                      "message": "지원하지 않는 소셜 제공자입니다 (github, google, kakao)",
-                                      "path": "/api/v1/auth/oauth/xxx/authorize"
-                                    }""")))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
     })
     @GetMapping("/oauth/{provider}/authorize")
     public ResponseEntity<Void> startOAuth(
@@ -225,34 +165,13 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
                     description = "로그인/가입 성공",
-                    content = @Content(schema = @Schema(implementation = OAuthLoginResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "success": true,
-                                      "code": "LOGIN_SUCCESS",
-                                      "message": "로그인되었습니다",
-                                      "data": {
-                                        "userId": 1,
-                                        "name": "Linh Nguyen",
-                                        "oauthProvider": "google",
-                                        "nativeLang": "ko",
-                                        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                                        "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6...",
-                                        "isNewUser": true
-                                      }
-                                    }"""))),
+                    content = @Content(schema = @Schema(implementation = OAuthLoginResponse.class))
+            ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
                     description = "OAuth 인증 실패",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "timestamp": "2026-08-09T14:44:57.646+00:00",
-                                      "status": 401,
-                                      "error": "Unauthorized",
-                                      "message": "OAuth 인증에 실패했습니다. 인가 코드가 유효하지 않습니다",
-                                      "path": "/api/v1/auth/oauth"
-                                    }""")))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
     })
     @PostMapping("/oauth")
     public ResponseEntity<ApiResponse<OAuthLoginResponse>> loginOAuth(
@@ -282,16 +201,6 @@ public class AuthController {
                     )
             }
     )
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "내 정보 조회 성공"
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "401",
-                    description = "미인증"
-            )
-    })
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<MyInfoResponse>> getMyInfo(
             @RequestHeader(value = "Authorization", required = false)
@@ -323,45 +232,6 @@ public class AuthController {
                     )
             }
     )
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "내 정보 수정 성공",
-                    content = @Content(
-                            schema = @Schema(implementation = UpdateMyInfoResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "success": true,
-                                      "code": "ME_UPDATED",
-                                      "message": "내 정보가 수정되었습니다",
-                                      "data": {
-                                        "userId": 1,
-                                        "name": "Linh Nguyen",
-                                        "nativeLang": "ko"
-                                      }
-                                    }""")
-                    )
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "400",
-                    description = "지원하지 않는 언어",
-                    content = @Content(
-                            schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "timestamp": "2026-08-09T17:02:00.000+00:00",
-                                      "status": 400,
-                                      "error": "Bad Request",
-                                      "message": "nativeLang은 ko, vi, en 중 하나여야 합니다",
-                                      "path": "/api/v1/auth/me"
-                                    }""")
-                    )
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "401",
-                    description = "미인증"
-            )
-    })
     @PatchMapping("/me")
     public ResponseEntity<ApiResponse<UpdateMyInfoResponse>> updateMyInfo(
             @RequestHeader(value = "Authorization", required = false)
@@ -371,16 +241,73 @@ public class AuthController {
         Long userId = extractUserId(authorization);
 
         UpdateMyInfoResponse response =
-                authService.updateMyInfo(
-                        userId,
-                        request
-                );
+                authService.updateMyInfo(userId, request);
 
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "ME_UPDATED",
                         "내 정보가 수정되었습니다",
                         response
+                )
+        );
+    }
+
+    @Operation(
+            summary = "로그아웃",
+            description = "Access Token을 확인한 후 로그아웃 처리한다.",
+            parameters = {
+                    @Parameter(
+                            name = "Authorization",
+                            description = "Bearer Access Token",
+                            required = true,
+                            example = "Bearer eyJhbGciOi..."
+                    )
+            }
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "로그아웃 성공",
+                    content = @Content(
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "code": "LOGOUT_SUCCESS",
+                                      "message": "로그아웃되었습니다",
+                                      "data": null
+                                    }
+                                    """)
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "미인증",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-08-09T17:03:00.000+00:00",
+                                      "status": 401,
+                                      "error": "Unauthorized",
+                                      "message": "로그인이 필요합니다",
+                                      "path": "/api/v1/auth/logout"
+                                    }
+                                    """)
+                    )
+            )
+    })
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization
+    ) {
+        extractUserId(authorization);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "LOGOUT_SUCCESS",
+                        "로그아웃되었습니다",
+                        null
                 )
         );
     }
