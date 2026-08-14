@@ -2,11 +2,13 @@ package com.hufsphere.linkboard.service;
 
 import com.hufsphere.linkboard.domain.AppUser;
 import com.hufsphere.linkboard.dto.request.LoginRequest;
+import com.hufsphere.linkboard.dto.request.RefreshTokenRequest;
 import com.hufsphere.linkboard.dto.request.SignupRequest;
 import com.hufsphere.linkboard.dto.request.UpdateMyInfoRequest;
 import com.hufsphere.linkboard.dto.response.LoginResponse;
 import com.hufsphere.linkboard.dto.response.MyInfoResponse;
 import com.hufsphere.linkboard.dto.response.SignupResponse;
+import com.hufsphere.linkboard.dto.response.TokenRefreshResponse;
 import com.hufsphere.linkboard.dto.response.UpdateMyInfoResponse;
 import com.hufsphere.linkboard.exception.DuplicateUsernameException;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
@@ -28,7 +30,9 @@ public class AuthService {
     @Transactional
     public SignupResponse signup(SignupRequest request) {
         if (appUserRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateUsernameException("이미 사용 중인 아이디입니다");
+            throw new DuplicateUsernameException(
+                    "이미 사용 중인 아이디입니다"
+            );
         }
 
         AppUser user = AppUser.builder()
@@ -119,6 +123,38 @@ public class AuthService {
         );
 
         return UpdateMyInfoResponse.from(user);
+    }
+
+    @Transactional(readOnly = true)
+    public TokenRefreshResponse refreshToken(
+            RefreshTokenRequest request
+    ) {
+        try {
+            Long userId =
+                    jwtProvider.getUserIdFromToken(
+                            request.refreshToken()
+                    );
+
+            AppUser user = appUserRepository.findById(userId)
+                    .orElseThrow(() ->
+                            new InvalidCredentialsException(
+                                    "리프레시 토큰이 유효하지 않습니다. 다시 로그인해주세요"
+                            )
+                    );
+
+            String accessToken =
+                    jwtProvider.generateAccessToken(
+                            user.getId(),
+                            user.getUsername()
+                    );
+
+            return new TokenRefreshResponse(accessToken);
+
+        } catch (Exception ex) {
+            throw new InvalidCredentialsException(
+                    "리프레시 토큰이 유효하지 않습니다. 다시 로그인해주세요"
+            );
+        }
     }
 
     private boolean isSupportedLanguage(String nativeLang) {

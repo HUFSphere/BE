@@ -4,12 +4,14 @@ import com.hufsphere.linkboard.common.ApiResponse;
 import com.hufsphere.linkboard.common.ErrorResponse;
 import com.hufsphere.linkboard.dto.request.LoginRequest;
 import com.hufsphere.linkboard.dto.request.OAuthLoginRequest;
+import com.hufsphere.linkboard.dto.request.RefreshTokenRequest;
 import com.hufsphere.linkboard.dto.request.SignupRequest;
 import com.hufsphere.linkboard.dto.request.UpdateMyInfoRequest;
 import com.hufsphere.linkboard.dto.response.LoginResponse;
 import com.hufsphere.linkboard.dto.response.MyInfoResponse;
 import com.hufsphere.linkboard.dto.response.OAuthLoginResponse;
 import com.hufsphere.linkboard.dto.response.SignupResponse;
+import com.hufsphere.linkboard.dto.response.TokenRefreshResponse;
 import com.hufsphere.linkboard.dto.response.UpdateMyInfoResponse;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
 import com.hufsphere.linkboard.security.JwtProvider;
@@ -38,6 +40,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
+
 @Tag(name = "Auth", description = "인증 API")
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -54,22 +57,31 @@ public class AuthController {
     @Value("${oauth.google.redirect-uri}")
     private String googleRedirectUri;
 
-    @Operation(summary = "일반 회원가입", description = "아이디/비밀번호/이름으로 회원가입한다.")
+    @Operation(
+            summary = "일반 회원가입",
+            description = "아이디/비밀번호/이름으로 회원가입한다."
+    )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "201",
                     description = "회원가입 성공",
-                    content = @Content(schema = @Schema(implementation = SignupResponse.class))
+                    content = @Content(
+                            schema = @Schema(implementation = SignupResponse.class)
+                    )
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
                     description = "입력값 검증 실패",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "409",
                     description = "아이디 중복",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
             )
     })
     @PostMapping("/signup")
@@ -86,22 +98,32 @@ public class AuthController {
                 ));
     }
 
-    @Operation(summary = "일반 로그인", description = "아이디/비밀번호로 로그인하고 액세스/리프레시 토큰을 발급한다.")
+
+    @Operation(
+            summary = "일반 로그인",
+            description = "아이디/비밀번호로 로그인하고 액세스/리프레시 토큰을 발급한다."
+    )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
                     description = "로그인 성공",
-                    content = @Content(schema = @Schema(implementation = LoginResponse.class))
+                    content = @Content(
+                            schema = @Schema(implementation = LoginResponse.class)
+                    )
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
                     description = "필수값 누락",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
                     description = "인증 실패",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
             )
     })
     @PostMapping("/login")
@@ -119,7 +141,11 @@ public class AuthController {
         );
     }
 
-    @Operation(summary = "소셜 로그인 시작", description = "지원하는 소셜 제공자의 로그인 페이지로 리다이렉트한다.")
+
+    @Operation(
+            summary = "소셜 로그인 시작",
+            description = "지원하는 소셜 제공자의 로그인 페이지로 리다이렉트한다."
+    )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "302",
@@ -128,12 +154,17 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
                     description = "미지원 제공자",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
             )
     })
     @GetMapping("/oauth/{provider}/authorize")
     public ResponseEntity<Void> startOAuth(
-            @Parameter(description = "소셜 제공자", example = "google")
+            @Parameter(
+                    description = "소셜 제공자",
+                    example = "google"
+            )
             @PathVariable String provider
     ) {
         if (!provider.equalsIgnoreCase("google")) {
@@ -157,6 +188,7 @@ public class AuthController {
                 .build();
     }
 
+
     @Operation(
             summary = "OAuth 로그인/가입",
             description = "인가 코드로 소셜 로그인한다. 최초 로그인 시 자동으로 계정이 생성된다."
@@ -165,12 +197,16 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
                     description = "로그인/가입 성공",
-                    content = @Content(schema = @Schema(implementation = OAuthLoginResponse.class))
+                    content = @Content(
+                            schema = @Schema(implementation = OAuthLoginResponse.class)
+                    )
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
                     description = "OAuth 인증 실패",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
             )
     })
     @PostMapping("/oauth")
@@ -188,6 +224,7 @@ public class AuthController {
                 )
         );
     }
+
 
     @Operation(
             summary = "내 정보 조회",
@@ -220,6 +257,7 @@ public class AuthController {
         );
     }
 
+
     @Operation(
             summary = "내 정보 수정",
             description = "로그인한 사용자의 표시명 또는 모국어를 수정한다.",
@@ -241,7 +279,10 @@ public class AuthController {
         Long userId = extractUserId(authorization);
 
         UpdateMyInfoResponse response =
-                authService.updateMyInfo(userId, request);
+                authService.updateMyInfo(
+                        userId,
+                        request
+                );
 
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -251,6 +292,7 @@ public class AuthController {
                 )
         );
     }
+
 
     @Operation(
             summary = "로그아웃",
@@ -311,6 +353,68 @@ public class AuthController {
                 )
         );
     }
+
+
+    // 1.5 토큰 갱신
+    @Operation(
+            summary = "토큰 갱신",
+            description = "Refresh Token을 검증하고 새로운 Access Token을 발급한다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "토큰 갱신 성공",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = TokenRefreshResponse.class
+                            ),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "code": "TOKEN_REFRESHED",
+                                      "message": "토큰이 갱신되었습니다",
+                                      "data": {
+                                        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6...(new)"
+                                      }
+                                    }
+                                    """)
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "리프레시 토큰 만료 또는 무효",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class
+                            ),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-08-09T17:04:00.000+00:00",
+                                      "status": 401,
+                                      "error": "Unauthorized",
+                                      "message": "리프레시 토큰이 유효하지 않습니다. 다시 로그인해주세요",
+                                      "path": "/api/v1/auth/refresh"
+                                    }
+                                    """)
+                    )
+            )
+    })
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<TokenRefreshResponse>> refreshToken(
+            @Valid @RequestBody RefreshTokenRequest request
+    ) {
+        TokenRefreshResponse response =
+                authService.refreshToken(request);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "TOKEN_REFRESHED",
+                        "토큰이 갱신되었습니다",
+                        response
+                )
+        );
+    }
+
 
     private Long extractUserId(String authorization) {
         if (authorization == null
