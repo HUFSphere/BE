@@ -27,7 +27,14 @@ public class SignupRequest {
     @Size(min = 1, max = 20, message = "이름은 1~20자여야 합니다")
     private String name;
 
-    @Schema(description = "모국어. 없으면 ko", example = "ko", allowableValues = {"ko", "vi", "en"})
-    @Pattern(regexp = "ko|vi|en", message = "지원하지 않는 언어입니다 (ko, vi, en)")
+    @Schema(
+            description = "모국어. 없으면 ko",
+            example = "ko",
+            allowableValues = {"ko", "vi", "en"}
+    )
+    @Pattern(
+            regexp = "ko|vi|en",
+            message = "nativeLang은 ko, vi, en 중 하나여야 합니다"
+    )
     private String nativeLang;
 }
