@@ -21,6 +21,10 @@ public class WorkItem {
     @JoinColumn(name = "workspace_id", nullable = false)
     private Workspace workspace;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_connection_id", nullable = false)
+    private SourceConnection sourceConnection;
+
     @Enumerated(EnumType.STRING)
     private SourceType sourceType;
 
@@ -28,8 +32,26 @@ public class WorkItem {
     private Long sourceNumber;
     private String title;
     private String status;
+
+    // AI가 추출한 요약(summary_brief)을 저장한다. 프로젝트 지도/작업 상세 조회 API가
+    // 이미 이 필드명으로 읽고 있어 컬럼명을 맞추기 위해 그대로 재사용한다.
     private String summaryNative;
+
+    @Lob
+    private String content;
+
     private String authorLogin;
     private String sourceUrl;
     private LocalDateTime sourceUpdatedAt;
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.status == null) {
+            this.status = "todo";
+        }
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+    }
 }

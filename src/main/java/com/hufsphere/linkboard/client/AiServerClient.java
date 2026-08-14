@@ -1,47 +1,108 @@
 package com.hufsphere.linkboard.client;
 
+import com.hufsphere.linkboard.client.dto.AskRequest;
 import com.hufsphere.linkboard.client.dto.AskResponse;
-import org.springframework.beans.factory.annotation.Value;
+import com.hufsphere.linkboard.client.dto.ExtractWorkItemsRequest;
+import com.hufsphere.linkboard.client.dto.ExtractWorkItemsResponse;
+import com.hufsphere.linkboard.client.dto.FigmaComment;
+import com.hufsphere.linkboard.client.dto.FigmaIngestRequest;
+import com.hufsphere.linkboard.client.dto.FigmaIngestResponse;
+import com.hufsphere.linkboard.client.dto.GithubIngestRequest;
+import com.hufsphere.linkboard.client.dto.GithubIngestResponse;
+import com.hufsphere.linkboard.client.dto.LinkWorkItemsRequest;
+import com.hufsphere.linkboard.client.dto.LinkWorkItemsResponse;
+import com.hufsphere.linkboard.client.dto.NotionIngestRequest;
+import com.hufsphere.linkboard.client.dto.NotionIngestResponse;
+import com.hufsphere.linkboard.client.dto.NotionPage;
+import com.hufsphere.linkboard.exception.SourceFetchFailedException;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
-
-import java.util.Map;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 @Component
+@RequiredArgsConstructor
 public class AiServerClient {
 
-    private final RestTemplate restTemplate;
-    private final String aiServerUrl;
+    private final RestClient aiServerRestClient;
 
-    public AiServerClient(RestTemplate restTemplate, @Value("${ai.server.url:http://localhost:8000}") String aiServerUrl) {
-        this.restTemplate = restTemplate;
-        this.aiServerUrl = aiServerUrl;
+    public GithubIngestResponse ingestGithub(String repo, int months) {
+        try {
+            return aiServerRestClient.post()
+                    .uri("/ingest/github")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new GithubIngestRequest(repo, months))
+                    .retrieve()
+                    .body(GithubIngestResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("외부 소스 조회에 실패했습니다");
+        }
     }
 
-    public void triggerSync(Long sourceId, String sourceRef) {
-        String url = aiServerUrl + "/api/v1/sync";
-        Map<String, Object> request = Map.of(
-                "source_id", sourceId,
-                "source_ref", sourceRef != null ? sourceRef : ""
-        );
+    public NotionIngestResponse ingestNotion(List<NotionPage> pages) {
         try {
-            restTemplate.postForEntity(url, request, String.class);
-        } catch (Exception e) {
-            System.err.println("AI 서버 동기화 요청 실패: " + e.getMessage());
+            return aiServerRestClient.post()
+                    .uri("/ingest/notion")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new NotionIngestRequest(pages))
+                    .retrieve()
+                    .body(NotionIngestResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("외부 소스 조회에 실패했습니다");
+        }
+    }
+
+    public FigmaIngestResponse ingestFigma(List<FigmaComment> comments) {
+        try {
+            return aiServerRestClient.post()
+                    .uri("/ingest/figma")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new FigmaIngestRequest(comments))
+                    .retrieve()
+                    .body(FigmaIngestResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("외부 소스 조회에 실패했습니다");
+        }
+    }
+
+    public ExtractWorkItemsResponse extractWorkItems(String lang) {
+        try {
+            return aiServerRestClient.post()
+                    .uri("/extract-work-items")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new ExtractWorkItemsRequest(lang))
+                    .retrieve()
+                    .body(ExtractWorkItemsResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("작업 추출에 실패했습니다");
+        }
+    }
+
+    public LinkWorkItemsResponse linkWorkItems(String lang, int topK) {
+        try {
+            return aiServerRestClient.post()
+                    .uri("/link-work-items")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new LinkWorkItemsRequest(lang, topK))
+                    .retrieve()
+                    .body(LinkWorkItemsResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("작업 연결에 실패했습니다");
         }
     }
 
     public AskResponse ask(String question, String lang) {
-        String url = aiServerUrl + "/api/v1/qna";
-        Map<String, Object> request = Map.of(
-                "question", question,
-                "lang", lang != null ? lang : "ko"
-        );
         try {
-            return restTemplate.postForObject(url, request, AskResponse.class);
-        } catch (Exception e) {
-            System.err.println("AI 서버 QnA 요청 실패: " + e.getMessage());
-            return new AskResponse();
+            return aiServerRestClient.post()
+                    .uri("/ask")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new AskRequest(question, lang))
+                    .retrieve()
+                    .body(AskResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("AI 서버 호출에 실패했습니다");
         }
     }
 }
