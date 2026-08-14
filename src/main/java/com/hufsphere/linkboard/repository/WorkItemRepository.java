@@ -9,4 +9,6 @@ import java.util.List;
 public interface WorkItemRepository extends JpaRepository<WorkItem, Long> {
     List<WorkItem> findByWorkspaceId(Long workspaceId);
     List<WorkItem> findByWorkspaceIdAndSourceType(Long workspaceId, SourceType sourceType);
+    // 가장 최근에 갱신된 작업 3개 조회
+    List<WorkItem> findTop3ByWorkspaceIdOrderBySourceUpdatedAtDesc(Long workspaceId);
 }
