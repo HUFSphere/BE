@@ -1,6 +1,6 @@
 package com.hufsphere.linkboard.controller;
 
-import com.hufsphere.linkboard.client.dto.WorkItemResponseDto;
+import com.hufsphere.linkboard.client.dto.WorkspaceInviteResponse;
 import com.hufsphere.linkboard.dto.RecentActivitiesResponse;
 import com.hufsphere.linkboard.dto.SuggestedQuestionsResponse;
 import com.hufsphere.linkboard.dto.WorkspaceSettingResponse;
@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @Tag(name = "Workspace", description = "워크스페이스 설정 및 관리 API")
@@ -53,21 +52,17 @@ public class WorkspaceController {
     }
 
     @Operation(
-            summary = "작업 목록 조회 (5.4)",
-            description = "워크스페이스 내 작업 목록을 조회합니다. platform(GITHUB, FIGMA, NOTION)과 status로 필터링할 수 있습니다."
+            summary = "팀원 초대 코드 발급 및 재발급",
+            description = "7일간 유효한 난수 초대 코드를 발급하거나 기존 코드를 재발급하여 갱신합니다."
     )
-    @GetMapping("/{workspaceId}/work-items")
-    public ResponseEntity<?> getWorkItems(
-            @PathVariable Long workspaceId,
-            @RequestParam(required = false) String platform,
-            @RequestParam(required = false) String status
-    ) {
-        List<WorkItemResponseDto> response = workspaceService.getWorkItems(workspaceId, platform, status);
+    @PostMapping("/{workspaceId}/invitations")
+    public ResponseEntity<?> generateInviteCode(@PathVariable Long workspaceId) {
+        WorkspaceInviteResponse response = workspaceService.generateOrRenewInviteCode(workspaceId);
 
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "code", "WORK_ITEMS_OK",
-                "message", "작업 목록 조회 성공",
+                "code", "INVITATION_CODE_CREATED",
+                "message", "초대 코드 발급 성공",
                 "data", response
         ));
     }

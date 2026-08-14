@@ -1,12 +1,10 @@
 package com.hufsphere.linkboard.service;
 
 import com.hufsphere.linkboard.client.dto.WorkItemResponseDto;
+import com.hufsphere.linkboard.client.dto.WorkspaceInviteResponse;
 import com.hufsphere.linkboard.domain.WorkItem;
 import com.hufsphere.linkboard.domain.Workspace;
-import com.hufsphere.linkboard.dto.RecentActivitiesResponse;
-import com.hufsphere.linkboard.dto.RecentActivityDto;
-import com.hufsphere.linkboard.dto.SuggestedQuestionsResponse;
-import com.hufsphere.linkboard.dto.WorkspaceSettingResponse;
+import com.hufsphere.linkboard.dto.*;
 import com.hufsphere.linkboard.dto.request.WorkspaceUpdateRequest;
 import com.hufsphere.linkboard.exception.WorkspaceNotFoundException;
 import com.hufsphere.linkboard.repository.WorkItemRepository;
@@ -15,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -25,6 +24,8 @@ public class WorkspaceService {
 
     private final WorkspaceRepository workspaceRepository;
     private final WorkItemRepository workItemRepository;
+    private static final String CODE_CHARACTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 헷갈리는 I, O, 0, 1 제외 난수 풀
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     public WorkspaceSettingResponse getWorkspaceSettings(Long workspaceId) {
         Workspace workspace = workspaceRepository.findById(workspaceId)
@@ -80,13 +81,30 @@ public class WorkspaceService {
                 .toList();
     }
 
+    // [신규] 초대 코드 발급 및 재발급 (7일 만료)
+    @Transactional
+    public WorkspaceInviteResponse generateOrRenewInviteCode(Long workspaceId) {
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다. id=" + workspaceId));
+
+        String inviteCode = generateInviteCode();
+        LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
+
+        workspace.updateInviteCode(inviteCode, expiresAt);
+
+        return WorkspaceInviteResponse.builder()
+                .workspaceId(workspace.getId())
+                .inviteCode(inviteCode)
+                .expiresAt(expiresAt)
+                .build();
+    }
+
     // 5.6 대시보드 AI 추천 질문
     public SuggestedQuestionsResponse getSuggestedQuestions(Long workspaceId, String lang) {
         if (!workspaceRepository.existsById(workspaceId)) {
             throw new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다. id=" + workspaceId);
         }
 
-        // DB 저장이 필요 없는 조회 요청이므로 명세서 예시 응답 반환
         return new SuggestedQuestionsResponse(List.of(
                 "이 프로젝트에서 인증 방식은 왜 JWT로 정해졌나요?",
                 "최근에 가장 많이 논의된 기능은 무엇인가요?",
@@ -115,5 +133,18 @@ public class WorkspaceService {
                 .toList();
 
         return new RecentActivitiesResponse(activities);
+    }
+
+    // 8자리 난수 코드 생성 유틸 (예: XK79-2M9Q)
+    private String generateInviteCode() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 8; i++) {
+            if (i == 4) {
+                sb.append("-");
+            }
+            int randomIndex = RANDOM.nextInt(CODE_CHARACTERS.length());
+            sb.append(CODE_CHARACTERS.charAt(randomIndex));
+        }
+        return sb.toString();
     }
 }
