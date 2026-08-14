@@ -1,5 +1,6 @@
 package com.hufsphere.linkboard.service;
 
+import com.hufsphere.linkboard.client.dto.WorkItemResponseDto;
 import com.hufsphere.linkboard.domain.WorkItem;
 import com.hufsphere.linkboard.domain.Workspace;
 import com.hufsphere.linkboard.dto.RecentActivitiesResponse;
@@ -61,6 +62,22 @@ public class WorkspaceService {
                 .defaultLanguage(workspace.getDefaultLanguage())
                 .updatedAt(workspace.getUpdatedAt())
                 .build();
+    }
+
+    // 5.4 작업 목록 조회 (플랫폼 및 상태 필터링)
+    public List<WorkItemResponseDto> getWorkItems(Long workspaceId, String platform, String status) {
+        if (!workspaceRepository.existsById(workspaceId)) {
+            throw new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다. id=" + workspaceId);
+        }
+
+        String filteredPlatform = (platform != null && !platform.trim().isEmpty()) ? platform.trim() : null;
+        String filteredStatus = (status != null && !status.trim().isEmpty()) ? status.trim() : null;
+
+        List<WorkItem> workItems = workItemRepository.findByWorkspaceIdAndFilters(workspaceId, filteredPlatform, filteredStatus);
+
+        return workItems.stream()
+                .map(WorkItemResponseDto::from)
+                .toList();
     }
 
     // 5.6 대시보드 AI 추천 질문
