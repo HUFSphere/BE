@@ -1,10 +1,17 @@
 package com.hufsphere.linkboard.repository;
 
 import com.hufsphere.linkboard.domain.SourceConnection;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
+public interface SourceConnectionRepository
+        extends JpaRepository<SourceConnection, Long> {
 
-public interface SourceConnectionRepository extends JpaRepository<SourceConnection, Long> {
-    List<SourceConnection> findByWorkspaceId(Long workspaceId);
+    List<SourceConnection> findByWorkspaceId(
+            Long workspaceId
+    );
+
+    long countByWorkspaceId(
+            Long workspaceId
+    );
 }

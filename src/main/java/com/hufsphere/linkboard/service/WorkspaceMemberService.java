@@ -4,13 +4,16 @@ import com.hufsphere.linkboard.domain.AppUser;
 import com.hufsphere.linkboard.domain.Workspace;
 import com.hufsphere.linkboard.domain.WorkspaceMember;
 import com.hufsphere.linkboard.dto.request.WorkspaceMemberAddRequest;
+import com.hufsphere.linkboard.dto.response.WorkspaceListResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceMemberAddResponse;
 import com.hufsphere.linkboard.exception.AlreadyWorkspaceMemberException;
 import com.hufsphere.linkboard.exception.MemberInviteForbiddenException;
 import com.hufsphere.linkboard.exception.WorkspaceOrUserNotFoundException;
 import com.hufsphere.linkboard.repository.AppUserRepository;
+import com.hufsphere.linkboard.repository.SourceConnectionRepository;
 import com.hufsphere.linkboard.repository.WorkspaceMemberRepository;
 import com.hufsphere.linkboard.repository.WorkspaceRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +28,8 @@ public class WorkspaceMemberService {
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final AppUserRepository appUserRepository;
+    private final SourceConnectionRepository sourceConnectionRepository;
+
 
     @Transactional
     public WorkspaceMemberAddResponse addMember(
@@ -32,7 +37,6 @@ public class WorkspaceMemberService {
             Long loginUserId,
             WorkspaceMemberAddRequest request
     ) {
-        // 워크스페이스 존재 확인
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() ->
                         new WorkspaceOrUserNotFoundException(
@@ -40,7 +44,6 @@ public class WorkspaceMemberService {
                         )
                 );
 
-        // 요청자가 해당 워크스페이스의 멤버인지 확인
         WorkspaceMember requesterMembership =
                 workspaceMemberRepository
                         .findByWorkspaceIdAndUserId(
@@ -53,7 +56,6 @@ public class WorkspaceMemberService {
                                 )
                         );
 
-        // leader만 멤버 추가 가능
         if (!"leader".equalsIgnoreCase(
                 requesterMembership.getRole()
         )) {
@@ -62,7 +64,6 @@ public class WorkspaceMemberService {
             );
         }
 
-        // 추가 대상 사용자 존재 확인
         AppUser targetUser =
                 appUserRepository.findById(request.userId())
                         .orElseThrow(() ->
@@ -71,7 +72,6 @@ public class WorkspaceMemberService {
                                 )
                         );
 
-        // 이미 워크스페이스에 속한 사용자인지 확인
         if (workspaceMemberRepository
                 .existsByWorkspaceIdAndUserId(
                         workspaceId,
@@ -102,6 +102,39 @@ public class WorkspaceMemberService {
         return WorkspaceMemberAddResponse.from(
                 saved
         );
+    }
+
+    public List<WorkspaceListResponse> getMyWorkspaces(
+            Long loginUserId
+    ) {
+        List<WorkspaceMember> memberships =
+                workspaceMemberRepository
+                        .findAllByUserId(loginUserId);
+
+        return memberships.stream()
+                .map(membership -> {
+
+                    Workspace workspace =
+                            membership.getWorkspace();
+
+                    int sourceCount =
+                            Math.toIntExact(
+                                    sourceConnectionRepository
+                                            .countByWorkspaceId(
+                                                    workspace.getId()
+                                            )
+                            );
+
+                    return new WorkspaceListResponse(
+                            workspace.getId(),
+                            workspace.getName(),
+                            membership.getRole(),
+                            workspace.getOwner().getId(),
+                            sourceCount,
+                            workspace.getCreatedAt()
+                    );
+                })
+                .toList();
     }
 
     private String normalizeRole(String role) {

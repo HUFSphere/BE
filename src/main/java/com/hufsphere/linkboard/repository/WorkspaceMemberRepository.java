@@ -1,6 +1,7 @@
 package com.hufsphere.linkboard.repository;
 
 import com.hufsphere.linkboard.domain.WorkspaceMember;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -14,6 +15,10 @@ public interface WorkspaceMemberRepository
 
     Optional<WorkspaceMember> findByWorkspaceIdAndUserId(
             Long workspaceId,
+            Long userId
+    );
+
+    List<WorkspaceMember> findAllByUserId(
             Long userId
     );
 }

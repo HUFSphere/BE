@@ -6,6 +6,7 @@ import com.hufsphere.linkboard.dto.request.WorkspaceCreateRequest;
 import com.hufsphere.linkboard.dto.request.WorkspaceMemberAddRequest;
 import com.hufsphere.linkboard.dto.request.WorkspaceUpdateRequest;
 import com.hufsphere.linkboard.dto.response.WorkspaceCreateResponse;
+import com.hufsphere.linkboard.dto.response.WorkspaceListResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceMemberAddResponse;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
 import com.hufsphere.linkboard.security.JwtProvider;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -41,9 +43,6 @@ public class WorkspaceController {
     private final WorkspaceMemberService workspaceMemberService;
     private final JwtProvider jwtProvider;
 
-    /*
-     * 2.1 워크스페이스 생성
-     */
     @Operation(
             summary = "워크스페이스 생성",
             description = "워크스페이스를 생성하고 생성자를 leader로 등록합니다."
@@ -86,9 +85,7 @@ public class WorkspaceController {
                 );
     }
 
-    /*
-     * 2.2 멤버 초대/추가
-     */
+
     @Operation(
             summary = "멤버 초대/추가",
             description = "팀장이 사용자를 워크스페이스 멤버로 추가합니다."
@@ -134,9 +131,43 @@ public class WorkspaceController {
                 );
     }
 
-    /*
-     * 기존 7.1
-     */
+
+    @Operation(
+            summary = "내 워크스페이스 목록",
+            description = "로그인한 사용자가 속한 워크스페이스 목록을 조회합니다."
+    )
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<WorkspaceListResponse>>>
+    getMyWorkspaces(
+            @Parameter(
+                    description = "Bearer Access Token",
+                    required = true,
+                    example = "Bearer eyJ..."
+            )
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorization
+    ) {
+        Long loginUserId =
+                extractUserId(authorization);
+
+        List<WorkspaceListResponse> response =
+                workspaceMemberService
+                        .getMyWorkspaces(
+                                loginUserId
+                        );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "WORKSPACES_OK",
+                        "워크스페이스 목록 조회 성공",
+                        response
+                )
+        );
+    }
+
     @Operation(
             summary = "워크스페이스 설정 조회 (7.1)",
             description = "워크스페이스의 기본 정보 및 설정값을 조회합니다."
@@ -160,9 +191,7 @@ public class WorkspaceController {
         );
     }
 
-    /*
-     * 기존 7.2
-     */
+
     @Operation(
             summary = "워크스페이스 설정 수정 (7.2)",
             description = "워크스페이스의 이름, 설명, 기본 언어 등 설정을 수정합니다."
@@ -173,10 +202,11 @@ public class WorkspaceController {
             @RequestBody WorkspaceUpdateRequest request
     ) {
         WorkspaceSettingResponse response =
-                workspaceService.updateWorkspaceSettings(
-                        workspaceId,
-                        request
-                );
+                workspaceService
+                        .updateWorkspaceSettings(
+                                workspaceId,
+                                request
+                        );
 
         return ResponseEntity.ok(
                 Map.of(
