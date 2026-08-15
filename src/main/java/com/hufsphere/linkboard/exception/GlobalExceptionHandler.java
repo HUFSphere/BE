@@ -144,10 +144,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-    /*
-     * 2.2 멤버 초대/추가
-     * 요청자가 해당 워크스페이스의 leader가 아닌 경우
-     */
     @ExceptionHandler(MemberInviteForbiddenException.class)
     public ResponseEntity<ErrorResponse> handleMemberInviteForbidden(
             MemberInviteForbiddenException ex,
@@ -160,10 +156,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-    /*
-     * 2.2 멤버 초대/추가
-     * 워크스페이스 또는 추가할 사용자가 존재하지 않는 경우
-     */
     @ExceptionHandler(WorkspaceOrUserNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleWorkspaceOrUserNotFound(
             WorkspaceOrUserNotFoundException ex,
@@ -176,10 +168,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-    /*
-     * 2.2 멤버 초대/추가
-     * 이미 해당 워크스페이스의 멤버인 경우
-     */
     @ExceptionHandler(AlreadyWorkspaceMemberException.class)
     public ResponseEntity<ErrorResponse> handleAlreadyWorkspaceMember(
             AlreadyWorkspaceMemberException ex,
@@ -187,6 +175,30 @@ public class GlobalExceptionHandler {
     ) {
         return buildResponse(
                 HttpStatus.CONFLICT,
+                ex.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(WorkspaceAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleWorkspaceAccessDenied(
+            WorkspaceAccessDeniedException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                ex.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(WorkspaceDetailNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleWorkspaceDetailNotFound(
+            WorkspaceDetailNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
                 ex.getMessage(),
                 request
         );

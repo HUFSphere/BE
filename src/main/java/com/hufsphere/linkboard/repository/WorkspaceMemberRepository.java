@@ -21,4 +21,8 @@ public interface WorkspaceMemberRepository
     List<WorkspaceMember> findAllByUserId(
             Long userId
     );
+
+    long countByWorkspaceId(
+            Long workspaceId
+    );
 }

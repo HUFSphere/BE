@@ -6,6 +6,7 @@ import com.hufsphere.linkboard.dto.request.WorkspaceCreateRequest;
 import com.hufsphere.linkboard.dto.request.WorkspaceMemberAddRequest;
 import com.hufsphere.linkboard.dto.request.WorkspaceUpdateRequest;
 import com.hufsphere.linkboard.dto.response.WorkspaceCreateResponse;
+import com.hufsphere.linkboard.dto.response.WorkspaceDetailResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceListResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceMemberAddResponse;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
@@ -85,7 +86,6 @@ public class WorkspaceController {
                 );
     }
 
-
     @Operation(
             summary = "멤버 초대/추가",
             description = "팀장이 사용자를 워크스페이스 멤버로 추가합니다."
@@ -131,7 +131,6 @@ public class WorkspaceController {
                 );
     }
 
-
     @Operation(
             summary = "내 워크스페이스 목록",
             description = "로그인한 사용자가 속한 워크스페이스 목록을 조회합니다."
@@ -169,6 +168,45 @@ public class WorkspaceController {
     }
 
     @Operation(
+            summary = "워크스페이스 상세 조회",
+            description = "로그인한 사용자가 속한 워크스페이스의 상세 정보를 조회합니다."
+    )
+    @GetMapping("/{workspaceId}")
+    public ResponseEntity<ApiResponse<WorkspaceDetailResponse>>
+    getWorkspaceDetail(
+            @PathVariable Long workspaceId,
+
+            @Parameter(
+                    description = "Bearer Access Token",
+                    required = true,
+                    example = "Bearer eyJ..."
+            )
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorization
+    ) {
+        Long loginUserId =
+                extractUserId(authorization);
+
+        WorkspaceDetailResponse response =
+                workspaceMemberService
+                        .getWorkspaceDetail(
+                                workspaceId,
+                                loginUserId
+                        );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "WORKSPACE_OK",
+                        "워크스페이스 조회 성공",
+                        response
+                )
+        );
+    }
+
+    @Operation(
             summary = "워크스페이스 설정 조회 (7.1)",
             description = "워크스페이스의 기본 정보 및 설정값을 조회합니다."
     )
@@ -190,7 +228,6 @@ public class WorkspaceController {
                 )
         );
     }
-
 
     @Operation(
             summary = "워크스페이스 설정 수정 (7.2)",

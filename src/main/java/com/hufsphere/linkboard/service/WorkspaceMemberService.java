@@ -4,10 +4,13 @@ import com.hufsphere.linkboard.domain.AppUser;
 import com.hufsphere.linkboard.domain.Workspace;
 import com.hufsphere.linkboard.domain.WorkspaceMember;
 import com.hufsphere.linkboard.dto.request.WorkspaceMemberAddRequest;
+import com.hufsphere.linkboard.dto.response.WorkspaceDetailResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceListResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceMemberAddResponse;
 import com.hufsphere.linkboard.exception.AlreadyWorkspaceMemberException;
 import com.hufsphere.linkboard.exception.MemberInviteForbiddenException;
+import com.hufsphere.linkboard.exception.WorkspaceAccessDeniedException;
+import com.hufsphere.linkboard.exception.WorkspaceDetailNotFoundException;
 import com.hufsphere.linkboard.exception.WorkspaceOrUserNotFoundException;
 import com.hufsphere.linkboard.repository.AppUserRepository;
 import com.hufsphere.linkboard.repository.SourceConnectionRepository;
@@ -29,7 +32,6 @@ public class WorkspaceMemberService {
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final AppUserRepository appUserRepository;
     private final SourceConnectionRepository sourceConnectionRepository;
-
 
     @Transactional
     public WorkspaceMemberAddResponse addMember(
@@ -77,7 +79,6 @@ public class WorkspaceMemberService {
                         workspaceId,
                         targetUser.getId()
                 )) {
-
             throw new AlreadyWorkspaceMemberException(
                     "이미 워크스페이스에 속한 사용자입니다"
             );
@@ -113,7 +114,6 @@ public class WorkspaceMemberService {
 
         return memberships.stream()
                 .map(membership -> {
-
                     Workspace workspace =
                             membership.getWorkspace();
 
@@ -135,6 +135,57 @@ public class WorkspaceMemberService {
                     );
                 })
                 .toList();
+    }
+
+    public WorkspaceDetailResponse getWorkspaceDetail(
+            Long workspaceId,
+            Long loginUserId
+    ) {
+        Workspace workspace =
+                workspaceRepository.findById(workspaceId)
+                        .orElseThrow(() ->
+                                new WorkspaceDetailNotFoundException(
+                                        "워크스페이스를 찾을 수 없습니다"
+                                )
+                        );
+
+        WorkspaceMember membership =
+                workspaceMemberRepository
+                        .findByWorkspaceIdAndUserId(
+                                workspaceId,
+                                loginUserId
+                        )
+                        .orElseThrow(() ->
+                                new WorkspaceAccessDeniedException(
+                                        "이 워크스페이스에 접근 권한이 없습니다"
+                                )
+                        );
+
+        int memberCount =
+                Math.toIntExact(
+                        workspaceMemberRepository
+                                .countByWorkspaceId(
+                                        workspaceId
+                                )
+                );
+
+        int sourceCount =
+                Math.toIntExact(
+                        sourceConnectionRepository
+                                .countByWorkspaceId(
+                                        workspaceId
+                                )
+                );
+
+        return new WorkspaceDetailResponse(
+                workspace.getId(),
+                workspace.getName(),
+                workspace.getOwner().getId(),
+                membership.getRole(),
+                memberCount,
+                sourceCount,
+                workspace.getCreatedAt()
+        );
     }
 
     private String normalizeRole(String role) {
