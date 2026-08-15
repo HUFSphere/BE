@@ -3,10 +3,13 @@ package com.hufsphere.linkboard.controller;
 import com.hufsphere.linkboard.common.ApiResponse;
 import com.hufsphere.linkboard.dto.WorkspaceSettingResponse;
 import com.hufsphere.linkboard.dto.request.WorkspaceCreateRequest;
+import com.hufsphere.linkboard.dto.request.WorkspaceMemberAddRequest;
 import com.hufsphere.linkboard.dto.request.WorkspaceUpdateRequest;
 import com.hufsphere.linkboard.dto.response.WorkspaceCreateResponse;
+import com.hufsphere.linkboard.dto.response.WorkspaceMemberAddResponse;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
 import com.hufsphere.linkboard.security.JwtProvider;
+import com.hufsphere.linkboard.service.WorkspaceMemberService;
 import com.hufsphere.linkboard.service.WorkspaceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,7 +19,14 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(
         name = "Workspace",
@@ -28,6 +38,7 @@ import org.springframework.web.bind.annotation.*;
 public class WorkspaceController {
 
     private final WorkspaceService workspaceService;
+    private final WorkspaceMemberService workspaceMemberService;
     private final JwtProvider jwtProvider;
 
     /*
@@ -70,6 +81,54 @@ public class WorkspaceController {
                         ApiResponse.success(
                                 "WORKSPACE_CREATED",
                                 "워크스페이스가 생성되었습니다",
+                                response
+                        )
+                );
+    }
+
+    /*
+     * 2.2 멤버 초대/추가
+     */
+    @Operation(
+            summary = "멤버 초대/추가",
+            description = "팀장이 사용자를 워크스페이스 멤버로 추가합니다."
+    )
+    @PostMapping("/{workspaceId}/members")
+    public ResponseEntity<ApiResponse<WorkspaceMemberAddResponse>>
+    addMember(
+            @PathVariable Long workspaceId,
+
+            @Parameter(
+                    description = "Bearer Access Token",
+                    required = true,
+                    example = "Bearer eyJ..."
+            )
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorization,
+
+            @Valid
+            @RequestBody
+            WorkspaceMemberAddRequest request
+    ) {
+        Long loginUserId =
+                extractUserId(authorization);
+
+        WorkspaceMemberAddResponse response =
+                workspaceMemberService.addMember(
+                        workspaceId,
+                        loginUserId,
+                        request
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                        ApiResponse.success(
+                                "MEMBER_ADDED",
+                                "멤버가 추가되었습니다",
                                 response
                         )
                 );
