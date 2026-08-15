@@ -262,4 +262,15 @@ public class GlobalExceptionHandler {
                 .status(status)
                 .body(body);
     }
+    @ExceptionHandler(WorkspaceUpdateForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleWorkspaceUpdateForbidden(
+            WorkspaceUpdateForbiddenException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                ex.getMessage(),
+                request
+        );
+    }
 }

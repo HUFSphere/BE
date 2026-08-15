@@ -5,7 +5,7 @@ import com.hufsphere.linkboard.domain.SourceConnection;
 import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.domain.Workspace;
 import com.hufsphere.linkboard.domain.WorkspaceMember;
-import com.hufsphere.linkboard.dto.WorkspaceSettingResponse;
+import com.hufsphere.linkboard.dto.response.WorkspaceSettingResponse;
 import com.hufsphere.linkboard.dto.request.WorkspaceCreateRequest;
 import com.hufsphere.linkboard.dto.request.WorkspaceUpdateRequest;
 import com.hufsphere.linkboard.dto.response.WorkspaceCreateResponse;

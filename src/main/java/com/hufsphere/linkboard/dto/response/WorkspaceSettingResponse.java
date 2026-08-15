@@ -1,4 +1,4 @@
-package com.hufsphere.linkboard.dto;
+package com.hufsphere.linkboard.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

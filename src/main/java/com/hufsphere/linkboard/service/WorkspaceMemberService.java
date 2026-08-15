@@ -4,14 +4,17 @@ import com.hufsphere.linkboard.domain.AppUser;
 import com.hufsphere.linkboard.domain.Workspace;
 import com.hufsphere.linkboard.domain.WorkspaceMember;
 import com.hufsphere.linkboard.dto.request.WorkspaceMemberAddRequest;
+import com.hufsphere.linkboard.dto.request.WorkspaceUpdateNameRequest;
 import com.hufsphere.linkboard.dto.response.WorkspaceDetailResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceListResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceMemberAddResponse;
+import com.hufsphere.linkboard.dto.response.WorkspaceUpdateNameResponse;
 import com.hufsphere.linkboard.exception.AlreadyWorkspaceMemberException;
 import com.hufsphere.linkboard.exception.MemberInviteForbiddenException;
 import com.hufsphere.linkboard.exception.WorkspaceAccessDeniedException;
 import com.hufsphere.linkboard.exception.WorkspaceDetailNotFoundException;
 import com.hufsphere.linkboard.exception.WorkspaceOrUserNotFoundException;
+import com.hufsphere.linkboard.exception.WorkspaceUpdateForbiddenException;
 import com.hufsphere.linkboard.repository.AppUserRepository;
 import com.hufsphere.linkboard.repository.SourceConnectionRepository;
 import com.hufsphere.linkboard.repository.WorkspaceMemberRepository;
@@ -185,6 +188,50 @@ public class WorkspaceMemberService {
                 memberCount,
                 sourceCount,
                 workspace.getCreatedAt()
+        );
+    }
+
+    @Transactional
+    public WorkspaceUpdateNameResponse updateWorkspaceName(
+            Long workspaceId,
+            Long loginUserId,
+            WorkspaceUpdateNameRequest request
+    ) {
+        Workspace workspace =
+                workspaceRepository.findById(workspaceId)
+                        .orElseThrow(() ->
+                                new WorkspaceDetailNotFoundException(
+                                        "워크스페이스를 찾을 수 없습니다"
+                                )
+                        );
+
+        WorkspaceMember membership =
+                workspaceMemberRepository
+                        .findByWorkspaceIdAndUserId(
+                                workspaceId,
+                                loginUserId
+                        )
+                        .orElseThrow(() ->
+                                new WorkspaceUpdateForbiddenException(
+                                        "워크스페이스 수정은 팀장만 가능합니다"
+                                )
+                        );
+
+        if (!"leader".equalsIgnoreCase(
+                membership.getRole()
+        )) {
+            throw new WorkspaceUpdateForbiddenException(
+                    "워크스페이스 수정은 팀장만 가능합니다"
+            );
+        }
+
+        workspace.setName(
+                request.name()
+        );
+
+        return new WorkspaceUpdateNameResponse(
+                workspace.getId(),
+                workspace.getName()
         );
     }
 

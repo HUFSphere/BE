@@ -1,14 +1,16 @@
 package com.hufsphere.linkboard.controller;
 
 import com.hufsphere.linkboard.common.ApiResponse;
-import com.hufsphere.linkboard.dto.WorkspaceSettingResponse;
+import com.hufsphere.linkboard.dto.response.WorkspaceSettingResponse;
 import com.hufsphere.linkboard.dto.request.WorkspaceCreateRequest;
 import com.hufsphere.linkboard.dto.request.WorkspaceMemberAddRequest;
+import com.hufsphere.linkboard.dto.request.WorkspaceUpdateNameRequest;
 import com.hufsphere.linkboard.dto.request.WorkspaceUpdateRequest;
 import com.hufsphere.linkboard.dto.response.WorkspaceCreateResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceDetailResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceListResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceMemberAddResponse;
+import com.hufsphere.linkboard.dto.response.WorkspaceUpdateNameResponse;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
 import com.hufsphere.linkboard.security.JwtProvider;
 import com.hufsphere.linkboard.service.WorkspaceMemberService;
@@ -23,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -201,6 +204,49 @@ public class WorkspaceController {
                 ApiResponse.success(
                         "WORKSPACE_OK",
                         "워크스페이스 조회 성공",
+                        response
+                )
+        );
+    }
+
+    @Operation(
+            summary = "워크스페이스 수정",
+            description = "팀장이 워크스페이스 이름을 수정합니다."
+    )
+    @PatchMapping("/{workspaceId}")
+    public ResponseEntity<ApiResponse<WorkspaceUpdateNameResponse>>
+    updateWorkspace(
+            @PathVariable Long workspaceId,
+
+            @Parameter(
+                    description = "Bearer Access Token",
+                    required = true,
+                    example = "Bearer eyJ..."
+            )
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorization,
+
+            @Valid
+            @RequestBody
+            WorkspaceUpdateNameRequest request
+    ) {
+        Long loginUserId =
+                extractUserId(authorization);
+
+        WorkspaceUpdateNameResponse response =
+                workspaceMemberService.updateWorkspaceName(
+                        workspaceId,
+                        loginUserId,
+                        request
+                );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "WORKSPACE_UPDATED",
+                        "워크스페이스가 수정되었습니다",
                         response
                 )
         );
