@@ -12,6 +12,7 @@ import com.hufsphere.linkboard.dto.response.WorkspaceUpdateNameResponse;
 import com.hufsphere.linkboard.exception.AlreadyWorkspaceMemberException;
 import com.hufsphere.linkboard.exception.MemberInviteForbiddenException;
 import com.hufsphere.linkboard.exception.WorkspaceAccessDeniedException;
+import com.hufsphere.linkboard.exception.WorkspaceDeleteForbiddenException;
 import com.hufsphere.linkboard.exception.WorkspaceDetailNotFoundException;
 import com.hufsphere.linkboard.exception.WorkspaceOrUserNotFoundException;
 import com.hufsphere.linkboard.exception.WorkspaceUpdateForbiddenException;
@@ -233,6 +234,48 @@ public class WorkspaceMemberService {
                 workspace.getId(),
                 workspace.getName()
         );
+    }
+
+    @Transactional
+    public void deleteWorkspace(
+            Long workspaceId,
+            Long loginUserId
+    ) {
+        Workspace workspace =
+                workspaceRepository.findById(workspaceId)
+                        .orElseThrow(() ->
+                                new WorkspaceDetailNotFoundException(
+                                        "워크스페이스를 찾을 수 없습니다"
+                                )
+                        );
+
+        WorkspaceMember membership =
+                workspaceMemberRepository
+                        .findByWorkspaceIdAndUserId(
+                                workspaceId,
+                                loginUserId
+                        )
+                        .orElseThrow(() ->
+                                new WorkspaceDeleteForbiddenException(
+                                        "워크스페이스 삭제는 팀장만 가능합니다"
+                                )
+                        );
+
+        if (!"leader".equalsIgnoreCase(
+                membership.getRole()
+        )) {
+            throw new WorkspaceDeleteForbiddenException(
+                    "워크스페이스 삭제는 팀장만 가능합니다"
+            );
+        }
+
+        sourceConnectionRepository
+                .deleteAllByWorkspaceId(workspaceId);
+
+        workspaceMemberRepository
+                .deleteAllByWorkspaceId(workspaceId);
+
+        workspaceRepository.delete(workspace);
     }
 
     private String normalizeRole(String role) {

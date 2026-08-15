@@ -24,6 +24,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -248,6 +249,43 @@ public class WorkspaceController {
                         "WORKSPACE_UPDATED",
                         "워크스페이스가 수정되었습니다",
                         response
+                )
+        );
+    }
+
+    @Operation(
+            summary = "워크스페이스 삭제",
+            description = "팀장이 워크스페이스를 삭제합니다."
+    )
+    @DeleteMapping("/{workspaceId}")
+    public ResponseEntity<ApiResponse<Void>>
+    deleteWorkspace(
+            @PathVariable Long workspaceId,
+
+            @Parameter(
+                    description = "Bearer Access Token",
+                    required = true,
+                    example = "Bearer eyJ..."
+            )
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorization
+    ) {
+        Long loginUserId =
+                extractUserId(authorization);
+
+        workspaceMemberService.deleteWorkspace(
+                workspaceId,
+                loginUserId
+        );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "WORKSPACE_DELETED",
+                        "워크스페이스가 삭제되었습니다",
+                        null
                 )
         );
     }

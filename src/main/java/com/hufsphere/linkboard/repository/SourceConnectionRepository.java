@@ -14,4 +14,8 @@ public interface SourceConnectionRepository
     long countByWorkspaceId(
             Long workspaceId
     );
+
+    void deleteAllByWorkspaceId(
+            Long workspaceId
+    );
 }

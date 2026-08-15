@@ -273,4 +273,15 @@ public class GlobalExceptionHandler {
                 request
         );
     }
+    @ExceptionHandler(WorkspaceDeleteForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleWorkspaceDeleteForbidden(
+            WorkspaceDeleteForbiddenException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                ex.getMessage(),
+                request
+        );
+    }
 }

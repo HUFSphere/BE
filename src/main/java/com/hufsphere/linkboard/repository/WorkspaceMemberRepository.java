@@ -25,4 +25,8 @@ public interface WorkspaceMemberRepository
     long countByWorkspaceId(
             Long workspaceId
     );
+
+    void deleteAllByWorkspaceId(
+            Long workspaceId
+    );
 }
