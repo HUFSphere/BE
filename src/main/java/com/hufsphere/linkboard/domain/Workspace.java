@@ -1,9 +1,8 @@
 package com.hufsphere.linkboard.domain;
 
 import jakarta.persistence.*;
-import lombok.*;
-
 import java.time.LocalDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "workspaces")
@@ -28,7 +27,11 @@ public class Workspace {
     @Builder.Default
     private String defaultLanguage = "ko";
 
-    @Column(name = "invite_code", length = 20)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "owner_user_id", nullable = false)
+    private AppUser owner;
+
+    @Column(name = "invite_code", unique = true, length = 20)
     private String inviteCode;
 
     @Column(name = "invite_code_expires_at")
