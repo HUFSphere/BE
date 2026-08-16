@@ -284,4 +284,40 @@ public class GlobalExceptionHandler {
                 request
         );
     }
+
+    @ExceptionHandler(MemberRemoveForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleMemberRemoveForbidden(
+            MemberRemoveForbiddenException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                ex.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(WorkspaceLeaveForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleWorkspaceLeaveForbidden(
+            WorkspaceLeaveForbiddenException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                ex.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(InviteCodeNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleInviteCodeNotFound(
+            InviteCodeNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                request
+        );
+    }
 }

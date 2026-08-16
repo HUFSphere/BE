@@ -5,14 +5,17 @@ import com.hufsphere.linkboard.common.ApiResponse;
 import com.hufsphere.linkboard.dto.RecentActivitiesResponse;
 import com.hufsphere.linkboard.dto.SuggestedQuestionsResponse;
 import com.hufsphere.linkboard.dto.request.WorkspaceCreateRequest;
+import com.hufsphere.linkboard.dto.request.WorkspaceJoinRequest;
 import com.hufsphere.linkboard.dto.request.WorkspaceMemberAddRequest;
 import com.hufsphere.linkboard.dto.request.WorkspaceUpdateNameRequest;
 import com.hufsphere.linkboard.dto.request.WorkspaceUpdateRequest;
 import com.hufsphere.linkboard.dto.response.WorkspaceSettingResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceCreateResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceDetailResponse;
+import com.hufsphere.linkboard.dto.response.WorkspaceJoinResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceListResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceMemberAddResponse;
+import com.hufsphere.linkboard.dto.response.WorkspaceMemberResponse;
 import com.hufsphere.linkboard.dto.response.WorkspaceUpdateNameResponse;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
 import com.hufsphere.linkboard.security.JwtProvider;
@@ -137,6 +140,145 @@ public class WorkspaceController {
                                 response
                         )
                 );
+    }
+
+    @Operation(
+            summary = "멤버 목록 조회",
+            description = "워크스페이스의 멤버 목록을 조회합니다."
+    )
+    @GetMapping("/{workspaceId}/members")
+    public ResponseEntity<ApiResponse<List<WorkspaceMemberResponse>>>
+    getMembers(
+            @PathVariable Long workspaceId
+    ) {
+        List<WorkspaceMemberResponse> response =
+                workspaceMemberService.getMembers(
+                        workspaceId
+                );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "MEMBERS_OK",
+                        "멤버 목록 조회 성공",
+                        response
+                )
+        );
+    }
+
+    @Operation(
+            summary = "멤버 내보내기",
+            description = "팀장이 워크스페이스 멤버를 내보냅니다."
+    )
+    @DeleteMapping("/{workspaceId}/members/{userId}")
+    public ResponseEntity<ApiResponse<Void>>
+    removeMember(
+            @PathVariable Long workspaceId,
+            @PathVariable Long userId,
+
+            @Parameter(
+                    description = "Bearer Access Token",
+                    required = true,
+                    example = "Bearer eyJ..."
+            )
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorization
+    ) {
+        Long loginUserId =
+                extractUserId(authorization);
+
+        workspaceMemberService.removeMember(
+                workspaceId,
+                loginUserId,
+                userId
+        );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "MEMBER_REMOVED",
+                        "멤버가 내보내졌습니다",
+                        null
+                )
+        );
+    }
+
+    @Operation(
+            summary = "워크스페이스 나가기",
+            description = "로그인한 사용자가 워크스페이스에서 나갑니다."
+    )
+    @DeleteMapping("/{workspaceId}/leave")
+    public ResponseEntity<ApiResponse<Void>>
+    leaveWorkspace(
+            @PathVariable Long workspaceId,
+
+            @Parameter(
+                    description = "Bearer Access Token",
+                    required = true,
+                    example = "Bearer eyJ..."
+            )
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorization
+    ) {
+        Long loginUserId =
+                extractUserId(authorization);
+
+        workspaceMemberService.leaveWorkspace(
+                workspaceId,
+                loginUserId
+        );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "WORKSPACE_LEFT",
+                        "워크스페이스에서 나갔습니다",
+                        null
+                )
+        );
+    }
+
+    @Operation(
+            summary = "초대 코드로 참여",
+            description = "초대 코드를 이용해 워크스페이스에 참여합니다."
+    )
+    @PostMapping("/join")
+    public ResponseEntity<ApiResponse<WorkspaceJoinResponse>>
+    joinWorkspace(
+            @Parameter(
+                    description = "Bearer Access Token",
+                    required = true,
+                    example = "Bearer eyJ..."
+            )
+            @RequestHeader(
+                    value = "Authorization",
+                    required = false
+            )
+            String authorization,
+
+            @Valid
+            @RequestBody
+            WorkspaceJoinRequest request
+    ) {
+        Long loginUserId =
+                extractUserId(authorization);
+
+        WorkspaceJoinResponse response =
+                workspaceMemberService.joinWorkspace(
+                        loginUserId,
+                        request
+                );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "WORKSPACE_JOINED",
+                        "워크스페이스에 참여했습니다",
+                        response
+                )
+        );
     }
 
     @Operation(
