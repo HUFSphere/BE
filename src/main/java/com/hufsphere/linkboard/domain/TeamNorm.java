@@ -6,33 +6,26 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "workspaces")
+@Table(name = "team_norms")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Workspace {
+public class TeamNorm {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "workspace_id", nullable = false)
+    private Long workspaceId;
+
     @Column(nullable = false, length = 100)
-    private String name;
+    private String category; // 예: COMMUNICATION, CODE_REVIEW, MEETING, CONVENTION 등
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
-    @Column(name = "default_language", length = 10)
-    @Builder.Default
-    private String defaultLanguage = "ko";
-
-    @Column(name = "invite_code", length = 20)
-    private String inviteCode;
-
-    @Column(name = "invite_code_expires_at")
-    private LocalDateTime inviteCodeExpiresAt;
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -51,12 +44,13 @@ public class Workspace {
         this.updatedAt = LocalDateTime.now();
     }
 
-    /**
-     * 초대 코드 및 만료일시 갱신 비즈니스 메서드
-     */
-    public void updateInviteCode(String newInviteCode, LocalDateTime expiresAt) {
-        this.inviteCode = newInviteCode;
-        this.inviteCodeExpiresAt = expiresAt;
+    public void update(String category, String content) {
+        if (category != null && !category.isBlank()) {
+            this.category = category;
+        }
+        if (content != null && !content.isBlank()) {
+            this.content = content;
+        }
         this.updatedAt = LocalDateTime.now();
     }
 }
