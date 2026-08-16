@@ -18,6 +18,8 @@ import com.hufsphere.linkboard.exception.WorkspaceOrUserNotFoundException;
 import com.hufsphere.linkboard.exception.WorkspaceUpdateForbiddenException;
 import com.hufsphere.linkboard.repository.AppUserRepository;
 import com.hufsphere.linkboard.repository.SourceConnectionRepository;
+import com.hufsphere.linkboard.repository.WorkItemLinkRepository;
+import com.hufsphere.linkboard.repository.WorkItemRepository;
 import com.hufsphere.linkboard.repository.WorkspaceMemberRepository;
 import com.hufsphere.linkboard.repository.WorkspaceRepository;
 import java.util.List;
@@ -36,6 +38,8 @@ public class WorkspaceMemberService {
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final AppUserRepository appUserRepository;
     private final SourceConnectionRepository sourceConnectionRepository;
+    private final WorkItemRepository workItemRepository;
+    private final WorkItemLinkRepository workItemLinkRepository;
 
     @Transactional
     public WorkspaceMemberAddResponse addMember(
@@ -268,6 +272,12 @@ public class WorkspaceMemberService {
                     "워크스페이스 삭제는 팀장만 가능합니다"
             );
         }
+
+        workItemLinkRepository
+                .deleteByWorkspaceId(workspaceId);
+
+        workItemRepository
+                .deleteByWorkspaceId(workspaceId);
 
         sourceConnectionRepository
                 .deleteAllByWorkspaceId(workspaceId);
