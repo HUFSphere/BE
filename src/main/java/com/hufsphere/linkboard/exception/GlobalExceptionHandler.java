@@ -320,4 +320,16 @@ public class GlobalExceptionHandler {
                 request
         );
     }
+
+    @ExceptionHandler(SourceDeleteForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleSourceDeleteForbidden(
+            SourceDeleteForbiddenException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                ex.getMessage(),
+                request
+        );
+    }
 }
