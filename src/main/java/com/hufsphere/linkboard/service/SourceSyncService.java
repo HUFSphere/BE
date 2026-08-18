@@ -8,15 +8,18 @@ import com.hufsphere.linkboard.client.dto.FigmaComment;
 import com.hufsphere.linkboard.client.dto.LinkWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.NotionPage;
 import com.hufsphere.linkboard.domain.FigmaConnection;
+import com.hufsphere.linkboard.domain.GithubConnection;
 import com.hufsphere.linkboard.domain.NotionConnection;
 import com.hufsphere.linkboard.domain.SourceConnection;
 import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.dto.response.SourceSyncResponse;
 import com.hufsphere.linkboard.exception.FigmaNotConnectedException;
+import com.hufsphere.linkboard.exception.GithubNotConnectedException;
 import com.hufsphere.linkboard.exception.NotionNotConnectedException;
 import com.hufsphere.linkboard.exception.SourceNotFoundException;
 import com.hufsphere.linkboard.exception.SyncAlreadyRunningException;
 import com.hufsphere.linkboard.repository.FigmaConnectionRepository;
+import com.hufsphere.linkboard.repository.GithubConnectionRepository;
 import com.hufsphere.linkboard.repository.NotionConnectionRepository;
 import com.hufsphere.linkboard.repository.SourceConnectionRepository;
 import java.time.LocalDateTime;
@@ -36,6 +39,7 @@ public class SourceSyncService {
     private final SourceConnectionRepository sourceConnectionRepository;
     private final NotionConnectionRepository notionConnectionRepository;
     private final FigmaConnectionRepository figmaConnectionRepository;
+    private final GithubConnectionRepository githubConnectionRepository;
     private final AiServerClient aiServerClient;
     private final NotionCrawlerClient notionCrawlerClient;
     private final FigmaCrawlerClient figmaCrawlerClient;
@@ -72,10 +76,20 @@ public class SourceSyncService {
 
     private void ingest(SourceConnection sourceConnection) {
         switch (sourceConnection.getSourceType()) {
-            case GITHUB -> aiServerClient.ingestGithub(sourceConnection.getSourceRef(), INGEST_MONTHS);
+            case GITHUB -> aiServerClient.ingestGithub(
+                    sourceConnection.getSourceRef(), INGEST_MONTHS, resolveGithubAccessToken(sourceConnection));
             case NOTION -> aiServerClient.ingestNotion(crawlNotionPages(sourceConnection));
             case FIGMA -> aiServerClient.ingestFigma(crawlFigmaComments(sourceConnection));
         }
+    }
+
+    private String resolveGithubAccessToken(SourceConnection sourceConnection) {
+        Long workspaceId = sourceConnection.getWorkspace().getId();
+        GithubConnection githubConnection = githubConnectionRepository
+                .findFirstByWorkspaceIdOrderByCreatedAtDesc(workspaceId)
+                .orElseThrow(() -> new GithubNotConnectedException("먼저 GitHub를 연결해주세요"));
+
+        return githubConnection.getAccessToken();
     }
 
     private List<NotionPage> crawlNotionPages(SourceConnection sourceConnection) {

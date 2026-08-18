@@ -26,7 +26,7 @@ public class SourceConnectionController {
 
     private final SourceConnectionService sourceConnectionService;
 
-    @Operation(summary = "연동 생성", description = "새로운 데이터 소스 연동을 추가합니다.")
+    @Operation(summary = "연동 생성", description = "새로운 데이터 소스 연동을 추가합니다. GitHub/Notion/Figma는 이 API 호출 전에 각각 /api/v1/auth/{source}/authorize → /callback OAuth로 먼저 연결되어 있어야 하며, accessToken은 더 이상 필요하지 않습니다.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
@@ -65,8 +65,7 @@ public class SourceConnectionController {
                     content = @Content(examples = @ExampleObject(value = """
                             {
                               "sourceType": "GITHUB",
-                              "targetRepoOrBoard": "HUFSphere/BE",
-                              "accessToken": "ghp_xxxxxxxxxxxxxxxxxxxx"
+                              "targetRepoOrBoard": "HUFSphere/BE"
                             }"""))
             )
             @RequestBody

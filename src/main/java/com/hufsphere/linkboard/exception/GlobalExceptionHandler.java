@@ -72,6 +72,18 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(GithubNotConnectedException.class)
+    public ResponseEntity<ErrorResponse> handleGithubNotConnected(
+            GithubNotConnectedException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                request
+        );
+    }
+
     @ExceptionHandler(SourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleSourceNotFound(
             SourceNotFoundException ex,
@@ -123,6 +135,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(FigmaOAuthFailedException.class)
     public ResponseEntity<ErrorResponse> handleFigmaOAuthFailed(
             FigmaOAuthFailedException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_GATEWAY,
+                ex.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(GithubOAuthFailedException.class)
+    public ResponseEntity<ErrorResponse> handleGithubOAuthFailed(
+            GithubOAuthFailedException ex,
             HttpServletRequest request
     ) {
         return buildResponse(

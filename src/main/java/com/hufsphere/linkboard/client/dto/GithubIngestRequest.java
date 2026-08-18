@@ -1,5 +1,6 @@
 package com.hufsphere.linkboard.client.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -9,4 +10,7 @@ public class GithubIngestRequest {
 
     private final String repo;
     private final int months;
+
+    @JsonProperty("access_token")
+    private final String accessToken;
 }
