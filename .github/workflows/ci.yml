@@ -49,3 +49,5 @@ jobs:
           NOTION_CLIENT_SECRET: dummy-ci-client-secret
           FIGMA_CLIENT_ID: dummy-ci-client-id
           FIGMA_CLIENT_SECRET: dummy-ci-client-secret
+          GITHUB_CLIENT_ID: dummy-ci-client-id
+          GITHUB_CLIENT_SECRET: dummy-ci-client-secret
