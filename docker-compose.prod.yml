@@ -3,7 +3,7 @@ services:
     image: ghcr.io/hufsphere/be:latest
     restart: always
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_HOST: mysql
@@ -24,7 +24,7 @@ services:
       FIGMA_CLIENT_SECRET: ${FIGMA_CLIENT_SECRET}
       FIGMA_REDIRECT_URI: ${FIGMA_REDIRECT_URI}
       AI_SERVER_URL: ${AI_SERVER_URL}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://hufsphere-linkboard.vercel.app}
     depends_on:
       mysql:
         condition: service_healthy
