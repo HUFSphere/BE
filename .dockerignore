@@ -1,0 +1,13 @@
+.git
+.github
+.gradle
+.idea
+build
+out
+bin
+*.iml
+HELP.md
+README.md
+src/main/resources/application-local.yaml
+.env
+.env.*
