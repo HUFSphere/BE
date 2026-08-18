@@ -3,6 +3,7 @@ package com.hufsphere.linkboard.service;
 import com.hufsphere.linkboard.client.dto.TeamNormRequestDto;
 import com.hufsphere.linkboard.client.dto.TeamNormResponseDto;
 import com.hufsphere.linkboard.domain.TeamNorm;
+import com.hufsphere.linkboard.exception.TeamNormNotFoundException;
 import com.hufsphere.linkboard.exception.WorkspaceNotFoundException;
 import com.hufsphere.linkboard.repository.TeamNormRepository;
 import com.hufsphere.linkboard.repository.WorkspaceRepository;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -53,7 +53,7 @@ public class TeamNormService {
     @Transactional
     public TeamNormResponseDto updateNorm(Long workspaceId, Long normId, TeamNormRequestDto request) {
         TeamNorm norm = teamNormRepository.findByIdAndWorkspaceId(normId, workspaceId)
-                .orElseThrow(() -> new NoSuchElementException("해당 팀 관행을 찾을 수 없습니다. normId=" + normId));
+                .orElseThrow(() -> new TeamNormNotFoundException("해당 팀 관행을 찾을 수 없습니다. normId=" + normId));
 
         norm.update(request.getCategory(), request.getContent());
         return TeamNormResponseDto.from(norm);
@@ -63,7 +63,7 @@ public class TeamNormService {
     @Transactional
     public void deleteNorm(Long workspaceId, Long normId) {
         TeamNorm norm = teamNormRepository.findByIdAndWorkspaceId(normId, workspaceId)
-                .orElseThrow(() -> new NoSuchElementException("해당 팀 관행을 찾을 수 없습니다. normId=" + normId));
+                .orElseThrow(() -> new TeamNormNotFoundException("해당 팀 관행을 찾을 수 없습니다. normId=" + normId));
 
         teamNormRepository.delete(norm);
     }

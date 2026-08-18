@@ -47,4 +47,4 @@ oauth:
     redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/v1/auth/oauth/google/callback}
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,https://hufsphere-linkboard.vercel.app}

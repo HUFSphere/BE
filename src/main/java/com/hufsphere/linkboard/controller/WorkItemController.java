@@ -1,11 +1,17 @@
 package com.hufsphere.linkboard.controller;
 
+import com.hufsphere.linkboard.common.ErrorResponse;
 import com.hufsphere.linkboard.dto.TeamDashboardResponse;
 import com.hufsphere.linkboard.dto.WorkItemDetailResponse;
 import com.hufsphere.linkboard.dto.WorkItemPageResponse;
 import com.hufsphere.linkboard.dto.WorkItemSummaryResponse;
 import com.hufsphere.linkboard.service.WorkItemService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,9 +28,55 @@ public class WorkItemController {
     private final WorkItemService workItemService;
 
     @Operation(summary = "작업 상세 조회", description = "특정 작업의 상세 정보 및 관련 연결 항목 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "작업 상세 조회 성공",
+                    content = @Content(schema = @Schema(implementation = WorkItemDetailResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "code": "WORK_ITEM_OK",
+                                      "message": "작업 상세 조회 성공",
+                                      "data": {
+                                        "id": 1,
+                                        "sourceType": "github",
+                                        "itemType": "pr",
+                                        "sourceNumber": 142,
+                                        "title": "Add JWT auth",
+                                        "status": "merged",
+                                        "authorLogin": "jaeyoung123",
+                                        "sourceUrl": "https://github.com/org/repo/pull/142",
+                                        "sourceUpdatedAt": "2026-08-09T15:12:40",
+                                        "summaryNative": "JWT 기반 인증 도입 PR",
+                                        "linkedItems": [
+                                          {
+                                            "id": 2,
+                                            "sourceType": "notion",
+                                            "itemType": "page",
+                                            "title": "인증 방식 논의",
+                                            "sourceUrl": "https://notion.so/auth-discussion"
+                                          }
+                                        ]
+                                      }
+                                    }"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "작업을 찾을 수 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-08-18T15:10:00",
+                                      "status": 400,
+                                      "error": "Bad Request",
+                                      "message": "작업을 찾을 수 없습니다. id=1",
+                                      "path": "/api/v1/work-items/1"
+                                    }"""))),
+    })
     @GetMapping("/work-items/{workItemId}")
     public ResponseEntity<?> getWorkItemDetail(
             @PathVariable Long workItemId,
+            @Parameter(description = "요약 언어. 없으면 워크스페이스 기본 언어", example = "ko")
             @RequestParam(required = false) String lang
     ) {
         WorkItemDetailResponse detail = workItemService.getWorkItemDetail(workItemId, lang);
@@ -38,6 +90,36 @@ public class WorkItemController {
     }
 
     @Operation(summary = "가지 요약 조회", description = "특정 작업의 지정된 언어 요약을 조회하거나 없으면 생성합니다.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "요약 조회 성공",
+                    content = @Content(schema = @Schema(implementation = WorkItemSummaryResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "code": "SUMMARY_OK",
+                                      "message": "요약 조회 성공",
+                                      "data": {
+                                        "workItemId": 1,
+                                        "lang": "ko",
+                                        "summaryText": "JWT 기반 인증 도입 PR",
+                                        "createdAt": "2026-08-18T15:10:00"
+                                      }
+                                    }"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "lang 누락/미지원 또는 작업을 찾을 수 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-08-18T15:10:00",
+                                      "status": 400,
+                                      "error": "Bad Request",
+                                      "message": "lang은 필수이며 ko, vi, en 중 하나여야 합니다",
+                                      "path": "/api/v1/work-items/1/summary"
+                                    }"""))),
+    })
     @GetMapping("/work-items/{workItemId}/summary")
     public ResponseEntity<?> getWorkItemSummary(
             @PathVariable Long workItemId,
@@ -64,14 +146,51 @@ public class WorkItemController {
     }
 
     @Operation(summary = "작업 목록 조회", description = "워크스페이스 내 작업 항목들을 검색, 필터링하여 목록으로 조회합니다.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "작업 목록 조회 성공",
+                    content = @Content(schema = @Schema(implementation = WorkItemPageResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "code": "WORK_ITEM_LIST_OK",
+                                      "message": "작업 목록 조회 성공",
+                                      "data": {
+                                        "items": [
+                                          {
+                                            "id": 1,
+                                            "sourceType": "github",
+                                            "itemType": "pr",
+                                            "sourceNumber": 142,
+                                            "title": "Add JWT auth",
+                                            "status": "merged",
+                                            "authorLogin": "jaeyoung123",
+                                            "sourceUrl": "https://github.com/org/repo/pull/142",
+                                            "sourceUpdatedAt": "2026-08-09T15:12:40"
+                                          }
+                                        ],
+                                        "page": 1,
+                                        "size": 20,
+                                        "totalElements": 1,
+                                        "totalPages": 1
+                                      }
+                                    }"""))),
+    })
     @GetMapping("/workspaces/{workspaceId}/work-items")
     public ResponseEntity<?> getWorkItems(
             @PathVariable Long workspaceId,
+            @Parameter(description = "제목 검색어", example = "auth")
             @RequestParam(required = false) String query,
+            @Parameter(description = "소스 필터 (github/notion/figma)", example = "github")
             @RequestParam(required = false) String sourceType,
+            @Parameter(description = "상태 필터", example = "merged")
             @RequestParam(required = false) String status,
+            @Parameter(description = "정렬 기준", example = "sourceUpdatedAt,desc")
             @RequestParam(defaultValue = "sourceUpdatedAt,desc") String sort,
+            @Parameter(description = "페이지 번호(1부터 시작)", example = "1")
             @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "페이지 크기", example = "20")
             @RequestParam(defaultValue = "20") int size
     ) {
         WorkItemPageResponse response = workItemService.getWorkItems(workspaceId, query, sourceType, status, sort, page, size);
@@ -85,6 +204,36 @@ public class WorkItemController {
     }
 
     @Operation(summary = "팀 현황판 조회", description = "워크스페이스 내 전체 작업 현황 및 멤버별 작업 통계를 조회합니다.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "팀 현황판 조회 성공",
+                    content = @Content(schema = @Schema(implementation = TeamDashboardResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "code": "DASHBOARD_OK",
+                                      "message": "팀 현황판 조회 성공",
+                                      "data": {
+                                        "totalWorkItems": 12,
+                                        "statusCounts": {
+                                          "open": 5,
+                                          "merged": 6,
+                                          "closed": 1
+                                        },
+                                        "members": [
+                                          {
+                                            "authorLogin": "jaeyoung123",
+                                            "totalAssigned": 4,
+                                            "statusCounts": {
+                                              "open": 2,
+                                              "merged": 2
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }"""))),
+    })
     @GetMapping("/workspaces/{workspaceId}/team-dashboard")
     public ResponseEntity<?> getTeamDashboard(@PathVariable Long workspaceId) {
         TeamDashboardResponse response = workItemService.getTeamDashboard(workspaceId);
