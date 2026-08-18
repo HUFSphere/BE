@@ -46,7 +46,8 @@ public class MapController {
                                             "itemType": "pr",
                                             "sourceNumber": 142,
                                             "title": "Add JWT auth",
-                                            "status": "merged",
+                                            "status": "done",
+                                            "statusLabel": "완료",
                                             "summaryBrief": "JWT 기반 인증 도입",
                                             "authorLogin": "jaeyoung123",
                                             "sourceUrl": "https://github.com/org/repo/pull/142",
@@ -79,7 +80,7 @@ public class MapController {
     @GetMapping
     public ResponseEntity<ApiResponse<MapResponse>> getProjectMap(
             @PathVariable Long workspaceId,
-            @Parameter(description = "요약 언어. 없으면 워크스페이스 기본 언어") @RequestParam(required = false) String lang,
+            @Parameter(description = "statusLabel 언어. 없으면 워크스페이스 기본 언어 (ko가 아니면 영어 라벨)") @RequestParam(required = false) String lang,
             @Parameter(description = "소스 필터 (github/notion/figma). 없으면 전체") @RequestParam(required = false) String sourceType
     ) {
         MapResponse mapResponse = mapService.getProjectMap(workspaceId, lang, sourceType);

@@ -44,7 +44,8 @@ public class WorkItemController {
                                         "itemType": "pr",
                                         "sourceNumber": 142,
                                         "title": "Add JWT auth",
-                                        "status": "merged",
+                                        "status": "done",
+                                        "statusLabel": "완료",
                                         "authorLogin": "jaeyoung123",
                                         "sourceUrl": "https://github.com/org/repo/pull/142",
                                         "sourceUpdatedAt": "2026-08-09T15:12:40",
@@ -76,7 +77,7 @@ public class WorkItemController {
     @GetMapping("/work-items/{workItemId}")
     public ResponseEntity<?> getWorkItemDetail(
             @PathVariable Long workItemId,
-            @Parameter(description = "요약 언어. 없으면 워크스페이스 기본 언어", example = "ko")
+            @Parameter(description = "statusLabel 언어. 없으면 워크스페이스 기본 언어 (ko가 아니면 영어 라벨)", example = "ko")
             @RequestParam(required = false) String lang
     ) {
         WorkItemDetailResponse detail = workItemService.getWorkItemDetail(workItemId, lang);
@@ -164,7 +165,8 @@ public class WorkItemController {
                                             "itemType": "pr",
                                             "sourceNumber": 142,
                                             "title": "Add JWT auth",
-                                            "status": "merged",
+                                            "status": "done",
+                                            "statusLabel": "완료",
                                             "authorLogin": "jaeyoung123",
                                             "sourceUrl": "https://github.com/org/repo/pull/142",
                                             "sourceUpdatedAt": "2026-08-09T15:12:40"
@@ -184,16 +186,18 @@ public class WorkItemController {
             @RequestParam(required = false) String query,
             @Parameter(description = "소스 필터 (github/notion/figma)", example = "github")
             @RequestParam(required = false) String sourceType,
-            @Parameter(description = "상태 필터", example = "merged")
+            @Parameter(description = "상태 필터 (todo/in_progress/review/done)", example = "todo")
             @RequestParam(required = false) String status,
             @Parameter(description = "정렬 기준", example = "sourceUpdatedAt,desc")
             @RequestParam(defaultValue = "sourceUpdatedAt,desc") String sort,
             @Parameter(description = "페이지 번호(1부터 시작)", example = "1")
             @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "페이지 크기", example = "20")
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "statusLabel 등 표시 문구 언어. 없으면 워크스페이스 기본 언어 (ko가 아니면 영어 라벨)", example = "ko")
+            @RequestParam(required = false) String lang
     ) {
-        WorkItemPageResponse response = workItemService.getWorkItems(workspaceId, query, sourceType, status, sort, page, size);
+        WorkItemPageResponse response = workItemService.getWorkItems(workspaceId, query, sourceType, status, sort, page, size, lang);
 
         return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -217,17 +221,18 @@ public class WorkItemController {
                                       "data": {
                                         "totalWorkItems": 12,
                                         "statusCounts": {
-                                          "open": 5,
-                                          "merged": 6,
-                                          "closed": 1
+                                          "todo": 5,
+                                          "in_progress": 3,
+                                          "review": 1,
+                                          "done": 3
                                         },
                                         "members": [
                                           {
                                             "authorLogin": "jaeyoung123",
                                             "totalAssigned": 4,
                                             "statusCounts": {
-                                              "open": 2,
-                                              "merged": 2
+                                              "todo": 2,
+                                              "done": 2
                                             }
                                           }
                                         ]

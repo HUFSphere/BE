@@ -31,6 +31,7 @@ public class WorkItemPageResponse {
         private Long sourceNumber;
         private String title;
         private String status;
+        private String statusLabel;
         private String authorLogin;
         private String sourceUrl;
         private LocalDateTime sourceUpdatedAt;
