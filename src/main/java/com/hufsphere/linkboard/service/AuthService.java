@@ -19,9 +19,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final Set<String> SUPPORTED_NATIVE_LANGS = Set.of(
+            "en", "ko", "de", "ja", "zh", "es", "ms", "it", "fr", "ar", "ru"
+    );
 
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
@@ -113,7 +119,7 @@ public class AuthService {
                 && !isSupportedLanguage(request.nativeLang())) {
 
             throw new IllegalArgumentException(
-                    "nativeLang은 ko, vi, en 중 하나여야 합니다"
+                    "nativeLang은 en, ko, de, ja, zh, es, ms, it, fr, ar, ru 중 하나여야 합니다"
             );
         }
 
@@ -158,8 +164,6 @@ public class AuthService {
     }
 
     private boolean isSupportedLanguage(String nativeLang) {
-        return nativeLang.equals("ko")
-                || nativeLang.equals("vi")
-                || nativeLang.equals("en");
+        return SUPPORTED_NATIVE_LANGS.contains(nativeLang);
     }
 }
