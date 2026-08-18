@@ -1,8 +1,10 @@
 package com.hufsphere.linkboard.service;
 
+import com.hufsphere.linkboard.common.WorkItemStatusLabels;
 import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.domain.WorkItem;
 import com.hufsphere.linkboard.domain.WorkItemLink;
+import com.hufsphere.linkboard.domain.Workspace;
 import com.hufsphere.linkboard.dto.MapResponse;
 import com.hufsphere.linkboard.exception.WorkspaceNotFoundException;
 import com.hufsphere.linkboard.repository.WorkItemLinkRepository;
@@ -25,9 +27,14 @@ public class MapService {
     private final WorkItemLinkRepository workItemLinkRepository;
 
     public MapResponse getProjectMap(Long workspaceId, String lang, String sourceType) {
-        if (!workspaceRepository.existsById(workspaceId)) {
-            throw new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다");
-        }
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다"));
+
+        String resolvedLang = lang != null && !lang.isBlank()
+                ? lang
+                : (workspace.getDefaultLanguage() != null && !workspace.getDefaultLanguage().isBlank()
+                        ? workspace.getDefaultLanguage()
+                        : "ko");
 
         // 1. sourceType 필터링 조건에 따른 WorkItem(노드) 조회
         List<WorkItem> workItems;
@@ -47,6 +54,7 @@ public class MapService {
                         .sourceNumber(item.getSourceNumber())
                         .title(item.getTitle())
                         .status(item.getStatus())
+                        .statusLabel(WorkItemStatusLabels.resolve(item.getStatus(), resolvedLang))
                         .summaryBrief(item.getSummaryNative())
                         .authorLogin(item.getAuthorLogin())
                         .sourceUrl(item.getSourceUrl())

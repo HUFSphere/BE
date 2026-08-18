@@ -37,6 +37,11 @@ figma:
   client-secret: ${FIGMA_CLIENT_SECRET}
   redirect-uri: ${FIGMA_REDIRECT_URI:http://localhost:8080/api/v1/auth/figma/callback}
 
+github:
+  client-id: ${GITHUB_CLIENT_ID}
+  client-secret: ${GITHUB_CLIENT_SECRET}
+  redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:8080/api/v1/auth/github/callback}
+
 jwt:
   secret: ${JWT_SECRET:linkboard-local-dev-only-jwt-secret-key-please-change-32bytes+}
   access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}

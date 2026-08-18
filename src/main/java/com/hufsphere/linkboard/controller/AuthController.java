@@ -419,7 +419,7 @@ public class AuthController {
                                       "data": {
                                         "userId": 1,
                                         "name": "박재영",
-                                        "nativeLang": "vi"
+                                        "nativeLang": "ja"
                                       }
                                     }"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -431,7 +431,7 @@ public class AuthController {
                                       "timestamp": "2026-08-18T10:00:00.000+00:00",
                                       "status": 400,
                                       "error": "Bad Request",
-                                      "message": "nativeLang은 ko, vi, en 중 하나여야 합니다",
+                                      "message": "nativeLang은 en, ko, de, ja, zh, es, ms, it, fr, ar, ru 중 하나여야 합니다",
                                       "path": "/api/v1/auth/me"
                                     }"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -455,7 +455,7 @@ public class AuthController {
                     content = @Content(examples = @ExampleObject(value = """
                             {
                               "name": "박재영",
-                              "nativeLang": "vi"
+                              "nativeLang": "ja"
                             }"""))
             )
             @RequestBody UpdateMyInfoRequest request

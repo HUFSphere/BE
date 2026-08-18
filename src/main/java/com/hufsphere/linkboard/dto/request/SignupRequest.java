@@ -30,11 +30,11 @@ public class SignupRequest {
     @Schema(
             description = "모국어. 없으면 ko",
             example = "ko",
-            allowableValues = {"ko", "vi", "en"}
+            allowableValues = {"en", "ko", "de", "ja", "zh", "es", "ms", "it", "fr", "ar", "ru"}
     )
     @Pattern(
-            regexp = "ko|vi|en",
-            message = "nativeLang은 ko, vi, en 중 하나여야 합니다"
+            regexp = "en|ko|de|ja|zh|es|ms|it|fr|ar|ru",
+            message = "nativeLang은 en, ko, de, ja, zh, es, ms, it, fr, ar, ru 중 하나여야 합니다"
     )
     private String nativeLang;
 }

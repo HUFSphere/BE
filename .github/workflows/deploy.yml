@@ -78,6 +78,9 @@ jobs:
             FIGMA_CLIENT_ID=${{ secrets.FIGMA_CLIENT_ID }}
             FIGMA_CLIENT_SECRET=${{ secrets.FIGMA_CLIENT_SECRET }}
             FIGMA_REDIRECT_URI=${{ secrets.FIGMA_REDIRECT_URI }}
+            GITHUB_CLIENT_ID=${{ secrets.GH_OAUTH_CLIENT_ID }}
+            GITHUB_CLIENT_SECRET=${{ secrets.GH_OAUTH_CLIENT_SECRET }}
+            GITHUB_REDIRECT_URI=${{ secrets.GH_OAUTH_REDIRECT_URI }}
             AI_SERVER_URL=${{ secrets.AI_SERVER_URL }}
             CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}
             OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}

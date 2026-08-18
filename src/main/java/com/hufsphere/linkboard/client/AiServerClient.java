@@ -28,12 +28,12 @@ public class AiServerClient {
 
     private final RestClient aiServerRestClient;
 
-    public GithubIngestResponse ingestGithub(String repo, int months) {
+    public GithubIngestResponse ingestGithub(String repo, int months, String accessToken) {
         try {
             return aiServerRestClient.post()
                     .uri("/ingest/github")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new GithubIngestRequest(repo, months))
+                    .body(new GithubIngestRequest(repo, months, accessToken))
                     .retrieve()
                     .body(GithubIngestResponse.class);
         } catch (RestClientException e) {

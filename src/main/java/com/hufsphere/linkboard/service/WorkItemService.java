@@ -1,14 +1,17 @@
 package com.hufsphere.linkboard.service;
 
+import com.hufsphere.linkboard.common.WorkItemStatusLabels;
 import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.domain.WorkItem;
 import com.hufsphere.linkboard.domain.WorkItemLink;
+import com.hufsphere.linkboard.domain.Workspace;
 import com.hufsphere.linkboard.dto.TeamDashboardResponse;
 import com.hufsphere.linkboard.dto.WorkItemDetailResponse;
 import com.hufsphere.linkboard.dto.WorkItemPageResponse;
 import com.hufsphere.linkboard.dto.WorkItemSummaryResponse;
 import com.hufsphere.linkboard.repository.WorkItemLinkRepository;
 import com.hufsphere.linkboard.repository.WorkItemRepository;
+import com.hufsphere.linkboard.repository.WorkspaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,10 +29,21 @@ public class WorkItemService {
 
     private final WorkItemRepository workItemRepository;
     private final WorkItemLinkRepository workItemLinkRepository;
+    private final WorkspaceRepository workspaceRepository;
+
+    private static String resolveLang(String lang, Workspace workspace) {
+        if (lang != null && !lang.isBlank()) {
+            return lang;
+        }
+        String defaultLanguage = workspace != null ? workspace.getDefaultLanguage() : null;
+        return defaultLanguage != null && !defaultLanguage.isBlank() ? defaultLanguage : "ko";
+    }
 
     public WorkItemDetailResponse getWorkItemDetail(Long workItemId, String lang) {
         WorkItem workItem = workItemRepository.findById(workItemId)
                 .orElseThrow(() -> new IllegalArgumentException("작업을 찾을 수 없습니다. id=" + workItemId));
+
+        String resolvedLang = resolveLang(lang, workItem.getWorkspace());
 
         List<WorkItemLink> links = workItemLinkRepository.findByFromWorkItemIdOrToWorkItemId(workItemId, workItemId);
 
@@ -56,6 +70,7 @@ public class WorkItemService {
                 .sourceNumber(workItem.getSourceNumber())
                 .title(workItem.getTitle())
                 .status(workItem.getStatus())
+                .statusLabel(WorkItemStatusLabels.resolve(workItem.getStatus(), resolvedLang))
                 .authorLogin(workItem.getAuthorLogin())
                 .sourceUrl(workItem.getSourceUrl())
                 .sourceUpdatedAt(workItem.getSourceUpdatedAt())
@@ -87,8 +102,12 @@ public class WorkItemService {
             String status,
             String sort,
             int page,
-            int size
+            int size,
+            String lang
     ) {
+        Workspace workspace = workspaceRepository.findById(workspaceId).orElse(null);
+        String resolvedLang = resolveLang(lang, workspace);
+
         List<WorkItem> workItems;
         if (sourceType != null && !sourceType.isBlank()) {
             SourceType type = SourceType.fromValue(sourceType);
@@ -110,6 +129,7 @@ public class WorkItemService {
                         .sourceNumber(item.getSourceNumber())
                         .title(item.getTitle())
                         .status(item.getStatus())
+                        .statusLabel(WorkItemStatusLabels.resolve(item.getStatus(), resolvedLang))
                         .authorLogin(item.getAuthorLogin())
                         .sourceUrl(item.getSourceUrl())
                         .sourceUpdatedAt(item.getSourceUpdatedAt())

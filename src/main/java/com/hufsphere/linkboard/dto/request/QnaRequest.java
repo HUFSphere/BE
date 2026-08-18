@@ -17,7 +17,11 @@ public class QnaRequest {
     @Schema(description = "특정 작업 맥락에서 질문 시 그 작업 ID. 전역이면 생략", example = "142")
     private Long contextWorkItemId;
 
-    @Schema(description = "답변 언어", example = "vi", allowableValues = {"ko", "vi", "en"})
+    @Schema(
+            description = "답변 언어",
+            example = "ko",
+            allowableValues = {"en", "ko", "de", "ja", "zh", "es", "ms", "it", "fr", "ar", "ru"}
+    )
     @NotBlank(message = "question과 lang은 필수입니다")
     private String lang;
 }

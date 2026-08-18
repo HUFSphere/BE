@@ -28,6 +28,7 @@ public class MapResponse {
         private Long sourceNumber;
         private String title;
         private String status;
+        private String statusLabel;
         // WorkItem.summaryNative 컬럼에 저장된 값 (AI가 준 summary_brief를 그대로 담고 있음)
         private String summaryBrief;
         private String authorLogin;
