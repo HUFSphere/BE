@@ -2,7 +2,6 @@ package com.hufsphere.linkboard.controller;
 
 import com.hufsphere.linkboard.common.ApiResponse;
 import com.hufsphere.linkboard.common.ErrorResponse;
-import com.hufsphere.linkboard.dto.request.SourceSyncRequest;
 import com.hufsphere.linkboard.dto.response.SourceSyncResponse;
 import com.hufsphere.linkboard.service.SourceSyncService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,7 +16,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,9 +30,9 @@ public class SourceSyncController {
     // TODO: 인증 도입 후 Authorization 헤더 기반 검증 추가
     @Operation(summary = "소스 동기화", description = "AI 서버의 수집·인덱싱 엔드포인트(POST /ingest/{github|notion|figma})를 호출해 소스를 동기화한다. "
             + "현재는 동기 방식으로 처리되며(호출이 끝날 때까지 대기 후 응답), "
-            + "github는 body 없이 sourceRef만으로 수집하고, notion은 워크스페이스에 연결된 Notion 계정의 access_token으로 "
-            + "페이지를 직접 크롤링해 수집하며(사전에 Notion 연동 필요), figma는 body의 comments를 그대로 AI 서버에 전달한다. "
-            + "github/notion은 성공 시 AI 서버의 /extract-work-items, /link-work-items를 이어서 호출해 work_item/work_item_link도 저장한다.")
+            + "github는 sourceRef(owner/repo)만으로 수집하고, notion·figma는 워크스페이스에 연결된 계정의 access_token으로 "
+            + "각각 페이지·코멘트를 직접 크롤링해 수집한다(사전에 해당 소스 연동 필요). "
+            + "성공 시 AI 서버의 /extract-work-items, /link-work-items를 이어서 호출해 work_item/work_item_link도 저장한다.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "202",
@@ -53,7 +51,7 @@ public class SourceSyncController {
                                     }"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "figma 동기화에 필요한 comments 누락, 또는 notion 소스인데 워크스페이스에 Notion이 연결되어 있지 않음",
+                    description = "워크스페이스에 notion/figma 계정이 연결되어 있지 않음",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(value = """
                                     {
@@ -103,11 +101,9 @@ public class SourceSyncController {
     @PostMapping("/sync")
     public ResponseEntity<ApiResponse<SourceSyncResponse>> sync(
             @Parameter(description = "동기화할 소스 연결 ID", example = "1")
-            @PathVariable Long sourceId,
-            @Parameter(description = "github/notion은 생략, figma는 comments 필요")
-            @RequestBody(required = false) SourceSyncRequest request
+            @PathVariable Long sourceId
     ) {
-        SourceSyncResponse response = sourceSyncService.sync(sourceId, request);
+        SourceSyncResponse response = sourceSyncService.sync(sourceId);
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.success("SYNC_STARTED", "동기화를 시작했습니다", response));
     }

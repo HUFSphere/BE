@@ -60,6 +60,18 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(FigmaNotConnectedException.class)
+    public ResponseEntity<ErrorResponse> handleFigmaNotConnected(
+            FigmaNotConnectedException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                request
+        );
+    }
+
     @ExceptionHandler(SourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleSourceNotFound(
             SourceNotFoundException ex,
@@ -99,6 +111,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotionOAuthFailedException.class)
     public ResponseEntity<ErrorResponse> handleNotionOAuthFailed(
             NotionOAuthFailedException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_GATEWAY,
+                ex.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(FigmaOAuthFailedException.class)
+    public ResponseEntity<ErrorResponse> handleFigmaOAuthFailed(
+            FigmaOAuthFailedException ex,
             HttpServletRequest request
     ) {
         return buildResponse(

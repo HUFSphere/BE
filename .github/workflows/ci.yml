@@ -47,3 +47,5 @@ jobs:
           DB_PASSWORD: linkboard
           NOTION_CLIENT_ID: dummy-ci-client-id
           NOTION_CLIENT_SECRET: dummy-ci-client-secret
+          FIGMA_CLIENT_ID: dummy-ci-client-id
+          FIGMA_CLIENT_SECRET: dummy-ci-client-secret
