@@ -31,7 +31,8 @@ public class FigmaOAuthController {
     private static final String FIGMA_AUTHORIZE_URL = "https://www.figma.com/oauth";
     // Figma 스코프 이름은 "files:read"가 아니라 "file_content:read"이다.
     // (Figma OAuth 문서: https://developers.figma.com/docs/rest-api/oauth-apps/)
-    private static final String FIGMA_SCOPE = "file_content:read,file_comments:read";
+    // FigmaOAuthClient.fetchUser()가 호출하는 GET /v1/me는 current_user:read 스코프가 없으면 실패한다.
+    private static final String FIGMA_SCOPE = "file_content:read,file_comments:read,current_user:read";
     private static final String STATE_PREFIX = "ws-";
 
     private final FigmaOAuthService figmaOAuthService;
