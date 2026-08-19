@@ -2,6 +2,7 @@ package com.hufsphere.linkboard.service;
 
 import com.hufsphere.linkboard.client.dto.WorkItemResponseDto;
 import com.hufsphere.linkboard.client.dto.WorkspaceInviteResponse;
+import com.hufsphere.linkboard.common.FigmaUrlParser;
 import com.hufsphere.linkboard.domain.AppUser;
 import com.hufsphere.linkboard.domain.SourceConnection;
 import com.hufsphere.linkboard.domain.SourceType;
@@ -145,11 +146,16 @@ public class WorkspaceService {
             SourceType sourceType,
             String sourceRef
     ) {
+        // Figma는 사용자가 공유 링크를 그대로 붙여넣으므로, API 호출에 쓰이는 순수 fileKey로 정규화한다.
+        String targetRepoOrBoard = sourceType == SourceType.FIGMA
+                ? FigmaUrlParser.extractFileKey(sourceRef)
+                : sourceRef;
+
         SourceConnection connection =
                 SourceConnection.builder()
                         .workspace(workspace)
                         .sourceType(sourceType)
-                        .targetRepoOrBoard(sourceRef)
+                        .targetRepoOrBoard(targetRepoOrBoard)
                         .status("PENDING")
                         .build();
 
