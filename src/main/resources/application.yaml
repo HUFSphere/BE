@@ -1,3 +1,9 @@
+# 리버스 프록시(nginx)가 HTTPS를 종단하고 내부적으로는 http://8080으로 프록시하므로,
+# 이 설정이 없으면 springdoc/Swagger가 X-Forwarded-Proto를 무시하고 서버 URL을 http://로
+# 생성해 브라우저의 mixed-content 차단(HTTPS 페이지 → HTTP 요청)을 유발한다.
+server:
+  forward-headers-strategy: framework
+
 spring:
   application:
     name: linkboard
