@@ -24,6 +24,10 @@ public class FigmaCrawlerClient {
 
     private static final String FIGMA_API_BASE = "https://api.figma.com";
 
+    // Figma 코멘트 reactions[].emoji는 ":white_check_mark:" 셧코드로 내려오는데,
+    // 혹시 유니코드 문자로 오는 경우까지 대비해 둘 다 인정한다.
+    private static final Set<String> CHECK_MARK_EMOJIS = Set.of(":white_check_mark:", "✅");
+
     private final RestClient figmaRestClient;
 
     public List<FigmaComment> fetchComments(String accessToken, String fileKey) {
@@ -47,10 +51,19 @@ public class FigmaCrawlerClient {
             String nodeId = nodeIdOf(comment);
             String frameName = nodeId != null ? nodeNames.getOrDefault(nodeId, nodeId) : "(캔버스 코멘트)";
             String url = buildCommentUrl(fileKey, nodeId, comment.path("id").asString());
-            comments.add(new FigmaComment(frameName, url, message));
+            comments.add(new FigmaComment(frameName, url, message, hasCheckMarkReaction(comment)));
         }
 
         return comments;
+    }
+
+    private boolean hasCheckMarkReaction(JsonNode comment) {
+        for (JsonNode reaction : comment.path("reactions")) {
+            if (CHECK_MARK_EMOJIS.contains(reaction.path("emoji").asString(""))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String nodeIdOf(JsonNode comment) {

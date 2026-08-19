@@ -20,6 +20,7 @@ import com.hufsphere.linkboard.repository.SourceConnectionRepository;
 import com.hufsphere.linkboard.repository.WorkItemLinkRepository;
 import com.hufsphere.linkboard.repository.WorkItemRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -103,7 +104,7 @@ class WorkItemSyncServiceTest {
         groupFeaturesResponse.setFeatures(List.of(groupedFeature));
         when(aiServerClient.groupFeatures("ko")).thenReturn(groupFeaturesResponse);
 
-        workItemSyncService.replaceForWorkspace(workspace, List.of(item0, item1), List.of(), "ko");
+        workItemSyncService.replaceForWorkspace(workspace, List.of(item0, item1), List.of(), "ko", Map.of());
 
         verify(workItemLinkRepository).deleteByWorkspaceId(1L);
         verify(workItemRepository).deleteByWorkspaceId(1L);
@@ -142,7 +143,7 @@ class WorkItemSyncServiceTest {
         emptyResponse.setFeatures(List.of());
         when(aiServerClient.groupFeatures("ko")).thenReturn(emptyResponse);
 
-        workItemSyncService.replaceForWorkspace(workspace, List.of(item0), List.of(), "ko");
+        workItemSyncService.replaceForWorkspace(workspace, List.of(item0), List.of(), "ko", Map.of());
 
         verify(featureRepository).deleteByWorkspaceId(1L);
         verify(featureRepository, org.mockito.Mockito.never()).save(any(Feature.class));

@@ -29,6 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class WorkItemSyncService {
 
+    private static final String DONE_STATUS = "done";
+    private static final String TODO_STATUS = "todo";
+
     private final WorkItemRepository workItemRepository;
     private final WorkItemLinkRepository workItemLinkRepository;
     private final SourceConnectionRepository sourceConnectionRepository;
@@ -41,7 +44,7 @@ public class WorkItemSyncService {
     // 서로 다른 소스 간 work_item_link(예: notion 결정 <-> github PR)와 기능 분류가 유지된다.
     @Transactional
     public void replaceForWorkspace(Workspace workspace, List<WorkItemDto> extractedItems,
-            List<WorkItemLinkGroupDto> extractedLinks, String lang) {
+            List<WorkItemLinkGroupDto> extractedLinks, String lang, Map<String, Boolean> figmaDoneByUrl) {
         Long workspaceId = workspace.getId();
 
         Map<SourceType, SourceConnection> connectionsByType = sourceConnectionRepository.findByWorkspaceId(workspaceId).stream()
@@ -51,7 +54,7 @@ public class WorkItemSyncService {
         workItemRepository.deleteByWorkspaceId(workspaceId);
         featureRepository.deleteByWorkspaceId(workspaceId);
 
-        Map<Integer, WorkItem> indexToItem = saveWorkItems(workspace, connectionsByType, extractedItems);
+        Map<Integer, WorkItem> indexToItem = saveWorkItems(workspace, connectionsByType, extractedItems, figmaDoneByUrl);
         saveWorkItemLinks(extractedLinks, indexToItem);
 
         GroupFeaturesResponse grouped = aiServerClient.groupFeatures(lang);
@@ -59,7 +62,7 @@ public class WorkItemSyncService {
     }
 
     private Map<Integer, WorkItem> saveWorkItems(Workspace workspace, Map<SourceType, SourceConnection> connectionsByType,
-            List<WorkItemDto> extractedItems) {
+            List<WorkItemDto> extractedItems, Map<String, Boolean> figmaDoneByUrl) {
         Map<Integer, WorkItem> indexToItem = new HashMap<>();
 
         for (int i = 0; i < extractedItems.size(); i++) {
@@ -71,6 +74,14 @@ public class WorkItemSyncService {
                 continue;
             }
 
+            // Figma는 AI의 텍스트 기반 추측 대신, 코멘트에 달린 ✅ 리액션 유무로 완료 여부를
+            // 실측해서 status를 덮어쓴다. 방금 크롤링한 코멘트가 아니면(다른 소스 동기화 중이면)
+            // figmaDoneByUrl이 비어 있으므로 이 분기를 타지 않고 AI의 추측을 그대로 쓴다.
+            String status = dto.getStatus();
+            if (sourceType == SourceType.FIGMA && figmaDoneByUrl.containsKey(dto.getUrl())) {
+                status = Boolean.TRUE.equals(figmaDoneByUrl.get(dto.getUrl())) ? DONE_STATUS : TODO_STATUS;
+            }
+
             WorkItem workItem = WorkItem.builder()
                     .workspace(workspace)
                     .sourceConnection(sourceConnection)
@@ -78,7 +89,7 @@ public class WorkItemSyncService {
                     .itemType(dto.getItemType())
                     .sourceNumber(dto.getSourceNumber())
                     .title(dto.getTitle())
-                    .status(dto.getStatus())
+                    .status(status)
                     .summaryNative(dto.getSummaryBrief())
                     .content(dto.getContent())
                     .authorLogin(dto.getAuthorLogin())
