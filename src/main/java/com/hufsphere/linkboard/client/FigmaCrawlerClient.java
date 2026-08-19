@@ -10,11 +10,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class FigmaCrawlerClient {
@@ -96,7 +99,8 @@ public class FigmaCrawlerClient {
                     .retrieve()
                     .body(JsonNode.class);
         } catch (RestClientException e) {
-            throw new SourceFetchFailedException("Figma 코멘트 조회에 실패했습니다");
+            logFigmaError("코멘트 조회", fileKey, e);
+            throw new SourceFetchFailedException("Figma 코멘트 조회에 실패했습니다: " + figmaErrorDetail(e));
         }
     }
 
@@ -108,7 +112,24 @@ public class FigmaCrawlerClient {
                     .retrieve()
                     .body(JsonNode.class);
         } catch (RestClientException e) {
-            throw new SourceFetchFailedException("Figma 노드 조회에 실패했습니다");
+            logFigmaError("노드 조회", fileKey, e);
+            throw new SourceFetchFailedException("Figma 노드 조회에 실패했습니다: " + figmaErrorDetail(e));
         }
+    }
+
+    private void logFigmaError(String step, String fileKey, RestClientException e) {
+        if (e instanceof RestClientResponseException responseException) {
+            log.error("Figma {} 실패: fileKey={}, status={}, body={}", step, fileKey,
+                    responseException.getStatusCode(), responseException.getResponseBodyAsString());
+        } else {
+            log.error("Figma {} 실패: fileKey={}", step, fileKey, e);
+        }
+    }
+
+    private String figmaErrorDetail(RestClientException e) {
+        if (e instanceof RestClientResponseException responseException) {
+            return responseException.getStatusCode() + " " + responseException.getResponseBodyAsString();
+        }
+        return String.valueOf(e.getMessage());
     }
 }
