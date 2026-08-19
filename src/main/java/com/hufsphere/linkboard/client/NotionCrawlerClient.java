@@ -19,6 +19,7 @@ import org.springframework.web.client.RestClientException;
 public class NotionCrawlerClient {
 
     private static final String NOTION_VERSION = "2022-06-28";
+    public static final String UNTITLED_PLACEHOLDER = "(제목 없음)";
     private static final List<String> TEXT_BLOCK_TYPES = List.of(
             "paragraph", "heading_1", "heading_2", "heading_3",
             "bulleted_list_item", "numbered_list_item", "to_do", "quote", "callout"
@@ -115,10 +116,10 @@ public class NotionCrawlerClient {
         for (JsonNode property : properties) {
             if ("title".equals(property.path("type").asString())) {
                 String title = joinPlainText(property.path("title"));
-                return title.isBlank() ? "(제목 없음)" : title;
+                return title.isBlank() ? UNTITLED_PLACEHOLDER : title;
             }
         }
-        return "(제목 없음)";
+        return UNTITLED_PLACEHOLDER;
     }
 
     private String joinPlainText(JsonNode richTextArray) {

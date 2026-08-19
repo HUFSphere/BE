@@ -12,11 +12,12 @@ import java.util.List;
 @Repository
 public interface WorkItemRepository extends JpaRepository<WorkItem, Long> {
 
-    // 기본 워크스페이스별 조회
-    List<WorkItem> findByWorkspaceId(Long workspaceId);
+    // 기본 워크스페이스별 조회. 정렬 기준을 명시하지 않으면 DB가 반환하는 임의 순서(사실상
+    // 삽입 순서)가 그대로 노출되므로, 5.4/5.7 API와 동일하게 sourceUpdatedAt DESC로 고정한다.
+    List<WorkItem> findByWorkspaceIdOrderBySourceUpdatedAtDesc(Long workspaceId);
 
     // MapService에서 사용하는 sourceType별 조회
-    List<WorkItem> findByWorkspaceIdAndSourceType(Long workspaceId, SourceType sourceType);
+    List<WorkItem> findByWorkspaceIdAndSourceTypeOrderBySourceUpdatedAtDesc(Long workspaceId, SourceType sourceType);
 
     // 5.7 대시보드 최근 활동 조회용
     List<WorkItem> findTop3ByWorkspaceIdOrderBySourceUpdatedAtDesc(Long workspaceId);

@@ -87,7 +87,7 @@ class WorkItemServiceTest {
                 workItemOf(103L, "todo", t1),
                 workItemOf(104L, "done", t0)
         );
-        when(workItemRepository.findByWorkspaceId(1L)).thenReturn(items);
+        when(workItemRepository.findByWorkspaceIdOrderBySourceUpdatedAtDesc(1L)).thenReturn(items);
 
         DashboardFeaturesResponse response = workItemService.getFeatureProgress(1L);
 
@@ -133,7 +133,7 @@ class WorkItemServiceTest {
         WorkItem gh4 = WorkItem.builder().sourceConnection(github).status("todo").title("PR4").sourceUpdatedAt(t4).build();
         WorkItem notionItem = WorkItem.builder().sourceConnection(notion).status("done").title("결정사항").sourceUpdatedAt(t1).build();
 
-        when(workItemRepository.findByWorkspaceId(1L)).thenReturn(List.of(gh1, gh2, gh3, gh4, notionItem));
+        when(workItemRepository.findByWorkspaceIdOrderBySourceUpdatedAtDesc(1L)).thenReturn(List.of(gh1, gh2, gh3, gh4, notionItem));
 
         DashboardSourcesResponse response = workItemService.getSourceProgress(1L);
 

@@ -126,9 +126,9 @@ public class WorkItemService {
         List<WorkItem> workItems;
         if (sourceType != null && !sourceType.isBlank()) {
             SourceType type = SourceType.fromValue(sourceType);
-            workItems = workItemRepository.findByWorkspaceIdAndSourceType(workspaceId, type);
+            workItems = workItemRepository.findByWorkspaceIdAndSourceTypeOrderBySourceUpdatedAtDesc(workspaceId, type);
         } else {
-            workItems = workItemRepository.findByWorkspaceId(workspaceId);
+            workItems = workItemRepository.findByWorkspaceIdOrderBySourceUpdatedAtDesc(workspaceId);
         }
 
         List<WorkItem> filteredItems = workItems.stream()
@@ -164,7 +164,7 @@ public class WorkItemService {
     }
 
     public TeamDashboardResponse getTeamDashboard(Long workspaceId) {
-        List<WorkItem> workItems = workItemRepository.findByWorkspaceId(workspaceId);
+        List<WorkItem> workItems = workItemRepository.findByWorkspaceIdOrderBySourceUpdatedAtDesc(workspaceId);
 
         // 1. 전체 작업 상태별 통계 집계
         Map<String, Integer> globalStatusCounts = new HashMap<>();
@@ -208,7 +208,7 @@ public class WorkItemService {
         requireWorkspace(workspaceId);
 
         List<Feature> features = featureRepository.findByWorkspaceId(workspaceId);
-        Map<Long, List<WorkItem>> itemsByFeatureId = workItemRepository.findByWorkspaceId(workspaceId).stream()
+        Map<Long, List<WorkItem>> itemsByFeatureId = workItemRepository.findByWorkspaceIdOrderBySourceUpdatedAtDesc(workspaceId).stream()
                 .filter(item -> item.getFeatureId() != null)
                 .collect(Collectors.groupingBy(WorkItem::getFeatureId));
 
@@ -246,7 +246,7 @@ public class WorkItemService {
         requireWorkspace(workspaceId);
 
         List<SourceConnection> connections = sourceConnectionRepository.findByWorkspaceId(workspaceId);
-        Map<Long, List<WorkItem>> itemsBySourceConnectionId = workItemRepository.findByWorkspaceId(workspaceId).stream()
+        Map<Long, List<WorkItem>> itemsBySourceConnectionId = workItemRepository.findByWorkspaceIdOrderBySourceUpdatedAtDesc(workspaceId).stream()
                 .filter(item -> item.getSourceConnection() != null)
                 .collect(Collectors.groupingBy(item -> item.getSourceConnection().getId()));
 

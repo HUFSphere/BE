@@ -100,6 +100,9 @@ public class SourceSyncService {
 
         String accessToken = notionConnection.getAccessToken();
         return notionCrawlerClient.searchPages(accessToken).stream()
+                // 제목 없는 페이지(빈 서브페이지, 제목 속성 없는 DB row 등)는
+                // work item으로서 의미가 없으므로 AI로 보내기 전에 걸러낸다.
+                .filter(page -> !NotionCrawlerClient.UNTITLED_PLACEHOLDER.equals(page.getTitle()))
                 .map(page -> new NotionPage(
                         page.getTitle(),
                         page.getUrl(),
