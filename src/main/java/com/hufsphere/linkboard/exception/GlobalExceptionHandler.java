@@ -4,6 +4,7 @@ import com.hufsphere.linkboard.common.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -25,6 +26,21 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.NOT_FOUND,
                 "요청하신 경로를 찾을 수 없습니다",
+                request
+        );
+    }
+
+    // 요청 본문이 비어있거나, JSON 형식이 아니거나, 잘못된 인코딩(예: UTF-8이 아닌 바이트)이면
+    // 이 예외가 던져진다. 별도로 잡지 않으면 Exception.class catch-all에 걸려 클라이언트 잘못인데도
+    // 400이 아닌 500으로 응답하게 된다.
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleMessageNotReadable(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "요청 본문을 읽을 수 없습니다. 형식과 인코딩(UTF-8)을 확인해주세요",
                 request
         );
     }
