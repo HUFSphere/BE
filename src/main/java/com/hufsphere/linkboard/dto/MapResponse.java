@@ -29,6 +29,8 @@ public class MapResponse {
         private String title;
         private String status;
         private String statusLabel;
+        // Notion to_do 체크 비율(0~100). 신호가 없으면(체크리스트 없는 페이지 등) null.
+        private Integer completionRate;
         // WorkItem.summaryNative 컬럼에 저장된 값 (AI가 준 summary_brief를 그대로 담고 있음)
         private String summaryBrief;
         private String authorLogin;

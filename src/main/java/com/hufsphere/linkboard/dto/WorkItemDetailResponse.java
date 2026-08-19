@@ -21,6 +21,7 @@ public class WorkItemDetailResponse {
     private String title;
     private String status;
     private String statusLabel;
+    private Integer completionRate;
     private String authorLogin;
     private String sourceUrl;
     private LocalDateTime sourceUpdatedAt;

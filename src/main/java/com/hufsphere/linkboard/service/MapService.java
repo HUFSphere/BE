@@ -55,6 +55,7 @@ public class MapService {
                         .title(item.getTitle())
                         .status(item.getStatus())
                         .statusLabel(WorkItemStatusLabels.resolve(item.getStatus(), resolvedLang))
+                        .completionRate(item.getCompletionRate())
                         .summaryBrief(item.getSummaryNative())
                         .authorLogin(item.getAuthorLogin())
                         .sourceUrl(item.getSourceUrl())

@@ -48,8 +48,15 @@ public class NotionCrawlerClient {
         return pages;
     }
 
-    public String fetchPageText(String accessToken, String pageId) {
+    // text: 본문 텍스트. todoTotal/todoChecked: 페이지 안 to_do 블록 개수와 그중 체크된 개수
+    // (완료율 계산용). Notion API가 to_do 블록마다 이미 내려주는 checked 필드를 같은 순회에서
+    // 같이 읽는 것뿐이라 추가 API 호출은 없다.
+    public record NotionPageContent(String text, int todoTotal, int todoChecked) {}
+
+    public NotionPageContent fetchPageText(String accessToken, String pageId) {
         StringBuilder text = new StringBuilder();
+        int todoTotal = 0;
+        int todoChecked = 0;
         String cursor = null;
 
         do {
@@ -59,6 +66,12 @@ public class NotionCrawlerClient {
                 if (!TEXT_BLOCK_TYPES.contains(type)) {
                     continue;
                 }
+                if ("to_do".equals(type)) {
+                    todoTotal++;
+                    if (block.path("to_do").path("checked").asBoolean(false)) {
+                        todoChecked++;
+                    }
+                }
                 String blockText = joinPlainText(block.path(type).path("rich_text"));
                 if (!blockText.isBlank()) {
                     text.append(blockText).append("\n");
@@ -67,7 +80,7 @@ public class NotionCrawlerClient {
             cursor = body.path("has_more").asBoolean(false) ? body.path("next_cursor").asString(null) : null;
         } while (cursor != null);
 
-        return text.toString().trim();
+        return new NotionPageContent(text.toString().trim(), todoTotal, todoChecked);
     }
 
     private JsonNode search(String accessToken, String cursor) {

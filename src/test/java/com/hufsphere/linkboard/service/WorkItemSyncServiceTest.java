@@ -104,7 +104,7 @@ class WorkItemSyncServiceTest {
         groupFeaturesResponse.setFeatures(List.of(groupedFeature));
         when(aiServerClient.groupFeatures("ko")).thenReturn(groupFeaturesResponse);
 
-        workItemSyncService.replaceForWorkspace(workspace, List.of(item0, item1), List.of(), "ko", Map.of());
+        workItemSyncService.replaceForWorkspace(workspace, List.of(item0, item1), List.of(), "ko", Map.of(), Map.of());
 
         verify(workItemLinkRepository).deleteByWorkspaceId(1L);
         verify(workItemRepository).deleteByWorkspaceId(1L);
@@ -143,9 +143,82 @@ class WorkItemSyncServiceTest {
         emptyResponse.setFeatures(List.of());
         when(aiServerClient.groupFeatures("ko")).thenReturn(emptyResponse);
 
-        workItemSyncService.replaceForWorkspace(workspace, List.of(item0), List.of(), "ko", Map.of());
+        workItemSyncService.replaceForWorkspace(workspace, List.of(item0), List.of(), "ko", Map.of(), Map.of());
 
         verify(featureRepository).deleteByWorkspaceId(1L);
         verify(featureRepository, org.mockito.Mockito.never()).save(any(Feature.class));
+    }
+
+    @Test
+    void notion_체크비율이_있으면_completionRate와_status를_실측값으로_덮어쓴다() {
+        SourceConnection notionConnection = SourceConnection.builder()
+                .workspace(workspace)
+                .sourceType(SourceType.NOTION)
+                .build();
+        notionConnection.setId(20L);
+        when(sourceConnectionRepository.findByWorkspaceId(1L)).thenReturn(List.of(notionConnection));
+
+        when(workItemRepository.save(any(WorkItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        GroupFeaturesResponse emptyResponse = new GroupFeaturesResponse();
+        emptyResponse.setFeatures(List.of());
+        when(aiServerClient.groupFeatures("ko")).thenReturn(emptyResponse);
+
+        WorkItemDto partiallyChecked = new WorkItemDto();
+        partiallyChecked.setSourceType("notion");
+        partiallyChecked.setItemType("meeting");
+        partiallyChecked.setTitle("5차 회의");
+        partiallyChecked.setStatus("done"); // AI 추측값, 덮어써져야 함
+        partiallyChecked.setUrl("https://notion.so/5");
+
+        WorkItemDto noneChecked = new WorkItemDto();
+        noneChecked.setSourceType("notion");
+        noneChecked.setItemType("meeting");
+        noneChecked.setTitle("6차 회의");
+        noneChecked.setStatus("in_progress");
+        noneChecked.setUrl("https://notion.so/6");
+
+        WorkItemDto fullyChecked = new WorkItemDto();
+        fullyChecked.setSourceType("notion");
+        fullyChecked.setItemType("meeting");
+        fullyChecked.setTitle("7차 회의");
+        fullyChecked.setStatus("todo"); // AI 추측값, 덮어써져야 함
+        fullyChecked.setUrl("https://notion.so/7");
+
+        WorkItemDto noSignal = new WorkItemDto();
+        noSignal.setSourceType("notion");
+        noSignal.setItemType("meeting");
+        noSignal.setTitle("체크리스트 없는 페이지");
+        noSignal.setStatus("blocked"); // 신호 없으니 AI 추측값 그대로 유지되어야 함
+        noSignal.setUrl("https://notion.so/no-checklist");
+
+        Map<String, Integer> notionCompletionByUrl = Map.of(
+                "https://notion.so/5", 60,
+                "https://notion.so/6", 0,
+                "https://notion.so/7", 100
+        );
+
+        workItemSyncService.replaceForWorkspace(
+                workspace, List.of(partiallyChecked, noneChecked, fullyChecked, noSignal), List.of(), "ko", Map.of(), notionCompletionByUrl);
+
+        ArgumentCaptor<WorkItem> savedItems = ArgumentCaptor.forClass(WorkItem.class);
+        verify(workItemRepository, atLeast(4)).save(savedItems.capture());
+        List<WorkItem> distinctSavedItems = savedItems.getAllValues().stream().distinct().toList();
+
+        WorkItem partial = distinctSavedItems.stream().filter(i -> "5차 회의".equals(i.getTitle())).findFirst().orElseThrow();
+        assertThat(partial.getCompletionRate()).isEqualTo(60);
+        assertThat(partial.getStatus()).isEqualTo("in_progress");
+
+        WorkItem none = distinctSavedItems.stream().filter(i -> "6차 회의".equals(i.getTitle())).findFirst().orElseThrow();
+        assertThat(none.getCompletionRate()).isEqualTo(0);
+        assertThat(none.getStatus()).isEqualTo("todo");
+
+        WorkItem full = distinctSavedItems.stream().filter(i -> "7차 회의".equals(i.getTitle())).findFirst().orElseThrow();
+        assertThat(full.getCompletionRate()).isEqualTo(100);
+        assertThat(full.getStatus()).isEqualTo("done");
+
+        WorkItem noChecklist = distinctSavedItems.stream().filter(i -> "체크리스트 없는 페이지".equals(i.getTitle())).findFirst().orElseThrow();
+        assertThat(noChecklist.getCompletionRate()).isNull();
+        assertThat(noChecklist.getStatus()).isEqualTo("blocked");
     }
 }

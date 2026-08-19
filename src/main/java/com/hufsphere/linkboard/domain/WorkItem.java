@@ -45,6 +45,10 @@ public class WorkItem {
     private LocalDateTime sourceUpdatedAt;
     private LocalDateTime createdAt;
 
+    // Notion to_do 체크 비율(0~100) 등 실측 완료율. 신호가 없으면(체크리스트 없는 페이지 등) null이고
+    // 이 경우 status는 AI가 텍스트로 추측한 값을 그대로 쓴다.
+    private Integer completionRate;
+
     // AI가 group-features로 분류한 기능(feature)의 id. 실제 연관관계(FK) 대신
     // 다른 소스 참조 컬럼들(FigmaConnection.workspaceId 등)과 동일하게 단순 Long으로 둔다.
     @Setter

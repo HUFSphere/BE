@@ -31,6 +31,7 @@ public class WorkItemSyncService {
 
     private static final String DONE_STATUS = "done";
     private static final String TODO_STATUS = "todo";
+    private static final String IN_PROGRESS_STATUS = "in_progress";
 
     private final WorkItemRepository workItemRepository;
     private final WorkItemLinkRepository workItemLinkRepository;
@@ -44,7 +45,8 @@ public class WorkItemSyncService {
     // 서로 다른 소스 간 work_item_link(예: notion 결정 <-> github PR)와 기능 분류가 유지된다.
     @Transactional
     public void replaceForWorkspace(Workspace workspace, List<WorkItemDto> extractedItems,
-            List<WorkItemLinkGroupDto> extractedLinks, String lang, Map<String, Boolean> figmaDoneByUrl) {
+            List<WorkItemLinkGroupDto> extractedLinks, String lang, Map<String, Boolean> figmaDoneByUrl,
+            Map<String, Integer> notionCompletionByUrl) {
         Long workspaceId = workspace.getId();
 
         Map<SourceType, SourceConnection> connectionsByType = sourceConnectionRepository.findByWorkspaceId(workspaceId).stream()
@@ -54,7 +56,8 @@ public class WorkItemSyncService {
         workItemRepository.deleteByWorkspaceId(workspaceId);
         featureRepository.deleteByWorkspaceId(workspaceId);
 
-        Map<Integer, WorkItem> indexToItem = saveWorkItems(workspace, connectionsByType, extractedItems, figmaDoneByUrl);
+        Map<Integer, WorkItem> indexToItem =
+                saveWorkItems(workspace, connectionsByType, extractedItems, figmaDoneByUrl, notionCompletionByUrl);
         saveWorkItemLinks(extractedLinks, indexToItem);
 
         GroupFeaturesResponse grouped = aiServerClient.groupFeatures(lang);
@@ -62,7 +65,7 @@ public class WorkItemSyncService {
     }
 
     private Map<Integer, WorkItem> saveWorkItems(Workspace workspace, Map<SourceType, SourceConnection> connectionsByType,
-            List<WorkItemDto> extractedItems, Map<String, Boolean> figmaDoneByUrl) {
+            List<WorkItemDto> extractedItems, Map<String, Boolean> figmaDoneByUrl, Map<String, Integer> notionCompletionByUrl) {
         Map<Integer, WorkItem> indexToItem = new HashMap<>();
 
         for (int i = 0; i < extractedItems.size(); i++) {
@@ -82,6 +85,14 @@ public class WorkItemSyncService {
                 status = Boolean.TRUE.equals(figmaDoneByUrl.get(dto.getUrl())) ? DONE_STATUS : TODO_STATUS;
             }
 
+            // Notion은 페이지 안 to_do 체크 비율(0~100)로 완료율을 실측해서 status까지 같이 덮어쓴다.
+            // 체크리스트가 없는 페이지(notionCompletionByUrl에 신호 없음)는 AI의 추측을 그대로 쓴다.
+            Integer completionRate = null;
+            if (sourceType == SourceType.NOTION && notionCompletionByUrl.containsKey(dto.getUrl())) {
+                completionRate = notionCompletionByUrl.get(dto.getUrl());
+                status = completionRate == 0 ? TODO_STATUS : completionRate == 100 ? DONE_STATUS : IN_PROGRESS_STATUS;
+            }
+
             WorkItem workItem = WorkItem.builder()
                     .workspace(workspace)
                     .sourceConnection(sourceConnection)
@@ -90,6 +101,7 @@ public class WorkItemSyncService {
                     .sourceNumber(dto.getSourceNumber())
                     .title(dto.getTitle())
                     .status(status)
+                    .completionRate(completionRate)
                     .summaryNative(dto.getSummaryBrief())
                     .content(dto.getContent())
                     .authorLogin(dto.getAuthorLogin())
