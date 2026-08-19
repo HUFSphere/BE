@@ -29,7 +29,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class FigmaOAuthController {
 
     private static final String FIGMA_AUTHORIZE_URL = "https://www.figma.com/oauth";
-    private static final String FIGMA_SCOPE = "files:read,file_comments:read";
+    // Figma 스코프 이름은 "files:read"가 아니라 "file_content:read"이다.
+    // (Figma OAuth 문서: https://developers.figma.com/docs/rest-api/oauth-apps/)
+    private static final String FIGMA_SCOPE = "file_content:read,file_comments:read";
     private static final String STATE_PREFIX = "ws-";
 
     private final FigmaOAuthService figmaOAuthService;
