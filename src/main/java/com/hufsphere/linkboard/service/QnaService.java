@@ -15,13 +15,16 @@ public class QnaService {
 
     private final WorkspaceRepository workspaceRepository;
     private final AiServerClient aiServerClient;
+    private final ToneSettingService toneSettingService;
 
-    public QnaResponse ask(Long workspaceId, QnaRequest request) {
+    public QnaResponse ask(Long workspaceId, Long requesterId, QnaRequest request) {
         if (!workspaceRepository.existsById(workspaceId)) {
             throw new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다");
         }
 
-        AskResponse askResponse = aiServerClient.ask(request.getQuestion(), request.getLang());
+        String tone = toneSettingService.resolveToneText(workspaceId, requesterId, request.getLang());
+
+        AskResponse askResponse = aiServerClient.ask(request.getQuestion(), request.getLang(), tone);
         return QnaResponse.from(askResponse);
     }
 }

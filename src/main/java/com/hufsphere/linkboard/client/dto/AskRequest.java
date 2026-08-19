@@ -9,4 +9,5 @@ public class AskRequest {
 
     private final String question;
     private final String lang;
+    private final String tone;
 }

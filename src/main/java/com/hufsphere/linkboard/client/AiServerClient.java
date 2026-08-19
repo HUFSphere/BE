@@ -108,12 +108,12 @@ public class AiServerClient {
         }
     }
 
-    public AskResponse ask(String question, String lang) {
+    public AskResponse ask(String question, String lang, String tone) {
         try {
             return aiServerRestClient.post()
                     .uri("/ask")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new AskRequest(question, lang))
+                    .body(new AskRequest(question, lang, tone))
                     .retrieve()
                     .body(AskResponse.class);
         } catch (RestClientException e) {
