@@ -59,3 +59,7 @@ oauth:
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,https://hufsphere-linkboard.vercel.app}
+
+app:
+  # OAuth 콜백 완료 후 사용자를 돌려보낼 FE 기본 주소. 각 컨트롤러가 여기에 구체 경로를 붙여 리다이렉트한다.
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
