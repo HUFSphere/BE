@@ -38,6 +38,10 @@ public class SourceSyncService {
     private static final String DEFAULT_LANG = "ko";
     private static final String NOTION_DEFAULT_ITEM_TYPE = "meeting";
 
+    // 빈 페이지·한두 줄짜리 스텁 페이지는 work item으로서 의미가 없으므로 걸러낸다.
+    // (임의 기준: 공백 제외 20자 미만이면 "내용 없음"으로 취급)
+    private static final int MIN_NOTION_BODY_LENGTH = 20;
+
     private final SourceConnectionRepository sourceConnectionRepository;
     private final NotionConnectionRepository notionConnectionRepository;
     private final FigmaConnectionRepository figmaConnectionRepository;
@@ -120,6 +124,8 @@ public class SourceSyncService {
                         page.getUrl(),
                         notionCrawlerClient.fetchPageText(accessToken, page.getId()),
                         NOTION_DEFAULT_ITEM_TYPE))
+                // 본문이 비었거나 너무 짧은 페이지(빈 페이지, 제목만 있는 스텁 등)도 걸러낸다.
+                .filter(notionPage -> notionPage.getText().trim().length() >= MIN_NOTION_BODY_LENGTH)
                 .toList();
     }
 

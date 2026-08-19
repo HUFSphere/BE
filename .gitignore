@@ -42,3 +42,6 @@ application-local.yml
 application-prod-local.yaml
 .env
 .env.*
+
+### Memory ###
+memory/
