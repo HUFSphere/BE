@@ -15,8 +15,8 @@ public class SignupResponse {
     @Schema(description = "사용자 ID", example = "1")
     private final Long userId;
 
-    @Schema(description = "로그인 아이디", example = "jaeyoung123")
-    private final String username;
+    @Schema(description = "로그인 이메일", example = "jaeyoung123@hufs.ac.kr")
+    private final String email;
 
     @Schema(description = "이름", example = "박재영")
     private final String name;
@@ -28,6 +28,6 @@ public class SignupResponse {
     private final LocalDateTime createdAt;
 
     public static SignupResponse from(AppUser user) {
-        return new SignupResponse(user.getId(), user.getUsername(), user.getName(), user.getNativeLang(), user.getCreatedAt());
+        return new SignupResponse(user.getId(), user.getEmail(), user.getName(), user.getNativeLang(), user.getCreatedAt());
     }
 }

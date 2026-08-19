@@ -10,7 +10,7 @@ import com.hufsphere.linkboard.dto.response.MyInfoResponse;
 import com.hufsphere.linkboard.dto.response.SignupResponse;
 import com.hufsphere.linkboard.dto.response.TokenRefreshResponse;
 import com.hufsphere.linkboard.dto.response.UpdateMyInfoResponse;
-import com.hufsphere.linkboard.exception.DuplicateUsernameException;
+import com.hufsphere.linkboard.exception.DuplicateEmailException;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
 import com.hufsphere.linkboard.repository.AppUserRepository;
 import com.hufsphere.linkboard.security.JwtProvider;
@@ -35,14 +35,14 @@ public class AuthService {
 
     @Transactional
     public SignupResponse signup(SignupRequest request) {
-        if (appUserRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateUsernameException(
-                    "이미 사용 중인 아이디입니다"
+        if (appUserRepository.existsByEmail(request.getEmail())) {
+            throw new DuplicateEmailException(
+                    "이미 사용 중인 이메일입니다"
             );
         }
 
         AppUser user = AppUser.builder()
-                .username(request.getUsername())
+                .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .nativeLang(request.getNativeLang())
@@ -55,10 +55,10 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        AppUser user = appUserRepository.findByUsername(request.getUsername())
+        AppUser user = appUserRepository.findByEmail(request.getEmail())
                 .orElseThrow(() ->
                         new InvalidCredentialsException(
-                                "아이디 또는 비밀번호가 올바르지 않습니다"
+                                "이메일 또는 비밀번호가 올바르지 않습니다"
                         )
                 );
 
@@ -67,20 +67,20 @@ public class AuthService {
                 user.getPassword()
         )) {
             throw new InvalidCredentialsException(
-                    "아이디 또는 비밀번호가 올바르지 않습니다"
+                    "이메일 또는 비밀번호가 올바르지 않습니다"
             );
         }
 
         String accessToken =
                 jwtProvider.generateAccessToken(
                         user.getId(),
-                        user.getUsername()
+                        user.getEmail()
                 );
 
         String refreshToken =
                 jwtProvider.generateRefreshToken(
                         user.getId(),
-                        user.getUsername()
+                        user.getEmail()
                 );
 
         return LoginResponse.of(
@@ -151,7 +151,7 @@ public class AuthService {
             String accessToken =
                     jwtProvider.generateAccessToken(
                             user.getId(),
-                            user.getUsername()
+                            user.getEmail()
                     );
 
             return new TokenRefreshResponse(accessToken);

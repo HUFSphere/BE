@@ -173,9 +173,9 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(DuplicateUsernameException.class)
-    public ResponseEntity<ErrorResponse> handleDuplicateUsername(
-            DuplicateUsernameException ex,
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateEmail(
+            DuplicateEmailException ex,
             HttpServletRequest request
     ) {
         return buildResponse(
