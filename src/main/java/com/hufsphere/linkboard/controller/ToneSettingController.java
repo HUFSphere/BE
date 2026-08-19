@@ -36,7 +36,7 @@ public class ToneSettingController {
 
     @Operation(
             summary = "톤 설정 조회",
-            description = "요청자가 이 워크스페이스에 저장한 톤 설정을 조회한다. 저장된 설정이 없으면 기본값(beginner, customText null)을 에러 없이 반환한다."
+            description = "요청자가 이 워크스페이스에 저장한 톤 설정을 조회한다. 저장된 설정이 없으면 기본값(presetKeys: [\"beginner\"], customText null)을 에러 없이 반환한다."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -48,7 +48,7 @@ public class ToneSettingController {
                               "code": "TONE_SETTING_OK",
                               "message": "톤 설정 조회 성공",
                               "data": {
-                                "presetKey": "beginner",
+                                "presetKeys": ["beginner", "expert"],
                                 "customText": "특히 Spring 관련 결정은 더 자세히 설명해주세요",
                                 "updatedAt": "2026-08-19T10:00:00"
                               }
@@ -95,7 +95,7 @@ public class ToneSettingController {
 
     @Operation(
             summary = "톤 설정 저장",
-            description = "요청자의 톤 설정을 저장한다. 기존 설정이 있으면 갱신한다(upsert)."
+            description = "요청자의 톤 설정을 저장한다. presetKeys는 beginner/intermediate/expert 중 하나 이상 중복 선택할 수 있다. 기존 설정이 있으면 갱신한다(upsert)."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -107,21 +107,21 @@ public class ToneSettingController {
                               "code": "TONE_SETTING_SAVED",
                               "message": "톤 설정 저장 성공",
                               "data": {
-                                "presetKey": "beginner",
+                                "presetKeys": ["beginner", "expert"],
                                 "customText": "특히 Spring 관련 결정은 더 자세히 설명해주세요",
                                 "updatedAt": "2026-08-19T10:00:00"
                               }
                             }"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "presetKey가 유효하지 않음",
+                    description = "presetKeys가 비어있거나 유효하지 않은 값을 포함함",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(value = """
                                     {
                                       "timestamp": "2026-08-19T10:00:00",
                                       "status": 400,
                                       "error": "Bad Request",
-                                      "message": "presetKey는 beginner/intermediate/expert 중 하나여야 합니다",
+                                      "message": "presetKeys는 beginner/intermediate/expert로만 구성되어야 합니다",
                                       "path": "/api/v1/workspaces/1/tone-setting"
                                     }"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

@@ -1,6 +1,8 @@
 package com.hufsphere.linkboard.domain;
 
+import com.hufsphere.linkboard.common.StringListConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,6 +12,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -35,8 +38,10 @@ public class ToneSetting {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "preset_key", nullable = false, length = 20)
-    private String presetKey;
+    // beginner/intermediate/expert 중 하나 이상 중복 선택 가능
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "preset_keys", nullable = false, length = 100)
+    private List<String> presetKeys;
 
     @Column(name = "custom_text", columnDefinition = "TEXT")
     private String customText;
@@ -48,15 +53,15 @@ public class ToneSetting {
     private LocalDateTime updatedAt;
 
     @Builder
-    private ToneSetting(Long workspaceId, Long userId, String presetKey, String customText) {
+    private ToneSetting(Long workspaceId, Long userId, List<String> presetKeys, String customText) {
         this.workspaceId = workspaceId;
         this.userId = userId;
-        this.presetKey = (presetKey != null && !presetKey.isBlank()) ? presetKey : DEFAULT_PRESET_KEY;
+        this.presetKeys = (presetKeys != null && !presetKeys.isEmpty()) ? presetKeys : List.of(DEFAULT_PRESET_KEY);
         this.customText = customText;
     }
 
-    public void update(String presetKey, String customText) {
-        this.presetKey = presetKey;
+    public void update(List<String> presetKeys, String customText) {
+        this.presetKeys = (presetKeys != null && !presetKeys.isEmpty()) ? presetKeys : List.of(DEFAULT_PRESET_KEY);
         this.customText = customText;
         this.updatedAt = LocalDateTime.now();
     }

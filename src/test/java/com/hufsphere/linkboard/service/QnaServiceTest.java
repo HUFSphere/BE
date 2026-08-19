@@ -49,11 +49,11 @@ class QnaServiceTest {
         qnaService = new QnaService(workspaceRepository, aiServerClient, toneSettingService);
     }
 
-    private static ToneSetting toneSettingOf(String presetKey) {
+    private static ToneSetting toneSettingOf(List<String> presetKeys) {
         return ToneSetting.builder()
                 .workspaceId(1L)
                 .userId(1L)
-                .presetKey(presetKey)
+                .presetKeys(presetKeys)
                 .build();
     }
 
@@ -79,11 +79,11 @@ class QnaServiceTest {
         QnaRequest request = requestOf("왜 JWT를 썼어요?", "ko");
 
         when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 10L))
-                .thenReturn(Optional.of(toneSettingOf("beginner")));
+                .thenReturn(Optional.of(toneSettingOf(List.of("beginner"))));
         qnaService.ask(1L, 10L, request);
 
         when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 20L))
-                .thenReturn(Optional.of(toneSettingOf("expert")));
+                .thenReturn(Optional.of(toneSettingOf(List.of("expert"))));
         qnaService.ask(1L, 20L, request);
 
         ArgumentCaptor<String> toneCaptor = ArgumentCaptor.forClass(String.class);
@@ -130,7 +130,7 @@ class QnaServiceTest {
                 .thenReturn(Optional.of(ToneSetting.builder()
                         .workspaceId(1L)
                         .userId(10L)
-                        .presetKey("beginner")
+                        .presetKeys(List.of("beginner"))
                         .customText("특히 Spring 관련 결정은 더 자세히 설명해주세요")
                         .build()));
         when(aiServerClient.ask(any(), any(), any())).thenReturn(askResponseOf("답변"));
@@ -140,6 +140,22 @@ class QnaServiceTest {
         verify(aiServerClient).ask(eq("질문"), eq("ko"), eq(
                 "저는 새로 합류한 주니어입니다. 기술 결정의 이유와 배경을 자세히 설명해주세요. "
                         + "팀의 관행이나 암묵적 규칙도 함께 알려주시면 좋겠습니다. 특히 Spring 관련 결정은 더 자세히 설명해주세요"
+        ));
+    }
+
+    @Test
+    void 프리셋을_여러_개_선택하면_각_프리셋_설명이_모두_톤에_포함된다() {
+        when(workspaceRepository.existsById(1L)).thenReturn(true);
+        when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 10L))
+                .thenReturn(Optional.of(toneSettingOf(List.of("beginner", "expert"))));
+        when(aiServerClient.ask(any(), any(), any())).thenReturn(askResponseOf("답변"));
+
+        qnaService.ask(1L, 10L, requestOf("질문", "ko"));
+
+        verify(aiServerClient).ask(eq("질문"), eq("ko"), eq(
+                "저는 새로 합류한 주니어입니다. 기술 결정의 이유와 배경을 자세히 설명해주세요. "
+                        + "팀의 관행이나 암묵적 규칙도 함께 알려주시면 좋겠습니다. "
+                        + "경험 많은 개발자입니다. 이 팀만의 특수한 결정과 주의점만 간결하게 알려주세요."
         ));
     }
 }

@@ -14,6 +14,7 @@ import com.hufsphere.linkboard.repository.ToneSettingRepository;
 import com.hufsphere.linkboard.repository.WorkspaceMemberRepository;
 import com.hufsphere.linkboard.repository.WorkspaceRepository;
 import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,13 +47,16 @@ public class ToneSettingService {
                 .orElseGet(ToneSettingResponse::defaultResponse);
     }
 
-    // 2. 톤 설정 저장(upsert)
+    // 2. 톤 설정 저장(upsert). beginner/intermediate/expert 중 하나 이상 중복 선택 가능
     @Transactional
     public ToneSettingResponse saveToneSetting(Long workspaceId, Long userId, ToneSettingRequest request) {
         validateMembership(workspaceId, userId);
 
-        if (!TonePresets.isValidPresetKey(request.getPresetKey())) {
-            throw new IllegalArgumentException("presetKey는 beginner/intermediate/expert 중 하나여야 합니다");
+        List<String> presetKeys = request.getPresetKeys().stream().distinct().toList();
+        for (String presetKey : presetKeys) {
+            if (!TonePresets.isValidPresetKey(presetKey)) {
+                throw new IllegalArgumentException("presetKeys는 beginner/intermediate/expert로만 구성되어야 합니다");
+            }
         }
 
         ToneSetting toneSetting = toneSettingRepository.findByWorkspaceIdAndUserId(workspaceId, userId)
@@ -61,32 +65,36 @@ public class ToneSettingService {
                         .userId(userId)
                         .build());
 
-        toneSetting.update(request.getPresetKey(), request.getCustomText());
+        toneSetting.update(presetKeys, request.getCustomText());
 
         ToneSetting saved = toneSettingRepository.save(toneSetting);
         return ToneSettingResponse.from(saved);
     }
 
-    // 4. Q&A 호출에 반영할 톤 문자열 구성. 로그인하지 않았거나 저장된 설정이 없으면 beginner 기본값을 사용한다.
+    // 4. Q&A 호출에 반영할 톤 문자열 구성. 선택된 프리셋 전부의 설명을 이어붙이고 customText를 덧붙인다.
+    // 로그인하지 않았거나 저장된 설정이 없으면 beginner 기본값을 사용한다.
     public String resolveToneText(Long workspaceId, Long userId, String lang) {
-        String presetKey = TonePresets.DEFAULT_PRESET_KEY;
+        List<String> presetKeys = List.of(TonePresets.DEFAULT_PRESET_KEY);
         String customText = null;
 
         if (userId != null) {
             ToneSetting toneSetting = toneSettingRepository.findByWorkspaceIdAndUserId(workspaceId, userId)
                     .orElse(null);
             if (toneSetting != null) {
-                presetKey = toneSetting.getPresetKey();
+                presetKeys = toneSetting.getPresetKeys();
                 customText = toneSetting.getCustomText();
             }
         }
 
-        String description = TonePresets.getDescription(presetKey, lang);
+        String combinedDescription = presetKeys.stream()
+                .map(presetKey -> TonePresets.getDescription(presetKey, lang))
+                .collect(Collectors.joining(" "));
+
         if (customText == null || customText.isBlank()) {
-            return description;
+            return combinedDescription;
         }
 
-        return description + " " + customText.trim();
+        return combinedDescription + " " + customText.trim();
     }
 
     private String resolveRequesterNativeLang(Long requesterId) {

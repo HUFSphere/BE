@@ -47,18 +47,15 @@ public class TonePresetController {
                               "data": [
                                 {
                                   "presetKey": "beginner",
-                                  "label": "이 팀이 처음이에요",
-                                  "description": "저는 새로 합류한 주니어입니다. 기술 결정의 이유와 배경을 자세히 설명해주세요. 팀의 관행이나 암묵적 규칙도 함께 알려주시면 좋겠습니다."
+                                  "label": "이 팀이 처음이에요"
                                 },
                                 {
                                   "presetKey": "intermediate",
-                                  "label": "어느 정도 알아요",
-                                  "description": "개발 경험은 있지만 이 프로젝트는 처음입니다. 핵심 결정 사항과 팀 고유 관행 위주로 알려주세요."
+                                  "label": "어느 정도 알아요"
                                 },
                                 {
                                   "presetKey": "expert",
-                                  "label": "숙련자예요",
-                                  "description": "경험 많은 개발자입니다. 이 팀만의 특수한 결정과 주의점만 간결하게 알려주세요."
+                                  "label": "숙련자예요"
                                 }
                               ]
                             }"""))),

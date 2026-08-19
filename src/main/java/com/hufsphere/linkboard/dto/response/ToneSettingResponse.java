@@ -4,6 +4,7 @@ import com.hufsphere.linkboard.common.TonePresets;
 import com.hufsphere.linkboard.domain.ToneSetting;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -13,8 +14,8 @@ import lombok.Getter;
 @Schema(description = "톤 설정")
 public class ToneSettingResponse {
 
-    @Schema(description = "프리셋 키", example = "beginner")
-    private final String presetKey;
+    @Schema(description = "프리셋 키 목록 (중복 선택 가능)", example = "[\"beginner\", \"expert\"]")
+    private final List<String> presetKeys;
 
     @Schema(description = "사용자 추가 텍스트", example = "특히 Spring 관련 결정은 더 자세히 설명해주세요")
     private final String customText;
@@ -24,13 +25,13 @@ public class ToneSettingResponse {
 
     public static ToneSettingResponse from(ToneSetting toneSetting) {
         return new ToneSettingResponse(
-                toneSetting.getPresetKey(),
+                toneSetting.getPresetKeys(),
                 toneSetting.getCustomText(),
                 toneSetting.getUpdatedAt()
         );
     }
 
     public static ToneSettingResponse defaultResponse() {
-        return new ToneSettingResponse(TonePresets.DEFAULT_PRESET_KEY, null, null);
+        return new ToneSettingResponse(List.of(TonePresets.DEFAULT_PRESET_KEY), null, null);
     }
 }

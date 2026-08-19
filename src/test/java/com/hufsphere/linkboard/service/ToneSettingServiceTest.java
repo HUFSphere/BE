@@ -41,9 +41,9 @@ class ToneSettingServiceTest {
     @InjectMocks
     private ToneSettingService toneSettingService;
 
-    private static ToneSettingRequest requestOf(String presetKey, String customText) {
+    private static ToneSettingRequest requestOf(List<String> presetKeys, String customText) {
         ToneSettingRequest request = new ToneSettingRequest();
-        ReflectionTestUtils.setField(request, "presetKey", presetKey);
+        ReflectionTestUtils.setField(request, "presetKeys", presetKeys);
         ReflectionTestUtils.setField(request, "customText", customText);
         return request;
     }
@@ -57,7 +57,6 @@ class ToneSettingServiceTest {
                 .containsExactly("beginner", "intermediate", "expert");
         assertThat(ko.get(0).getLabel()).isEqualTo("이 팀이 처음이에요");
         assertThat(vi.get(0).getLabel()).isEqualTo("Tôi mới vào team");
-        assertThat(ko.get(0).getDescription()).isNotEqualTo(vi.get(0).getDescription());
     }
 
     @Test
@@ -88,7 +87,7 @@ class ToneSettingServiceTest {
 
         ToneSettingResponse response = toneSettingService.getToneSetting(1L, 10L);
 
-        assertThat(response.getPresetKey()).isEqualTo("beginner");
+        assertThat(response.getPresetKeys()).containsExactly("beginner");
         assertThat(response.getCustomText()).isNull();
         assertThat(response.getUpdatedAt()).isNull();
     }
@@ -111,18 +110,32 @@ class ToneSettingServiceTest {
     }
 
     @Test
-    void 톤_설정을_저장하면_요청한_값이_그대로_반환된다() {
+    void 프리셋을_여러_개_중복_선택해_저장할_수_있다() {
         when(workspaceRepository.existsById(1L)).thenReturn(true);
         when(workspaceMemberRepository.existsByWorkspaceIdAndUserId(1L, 10L)).thenReturn(true);
         when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 10L)).thenReturn(Optional.empty());
         when(toneSettingRepository.save(any(ToneSetting.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        ToneSettingResponse response =
-                toneSettingService.saveToneSetting(1L, 10L, requestOf("expert", "Spring 결정은 더 자세히 설명해주세요"));
+        ToneSettingResponse response = toneSettingService.saveToneSetting(
+                1L, 10L, requestOf(List.of("beginner", "expert"), "Spring 결정은 더 자세히 설명해주세요"));
 
-        assertThat(response.getPresetKey()).isEqualTo("expert");
+        assertThat(response.getPresetKeys()).containsExactly("beginner", "expert");
         assertThat(response.getCustomText()).isEqualTo("Spring 결정은 더 자세히 설명해주세요");
+    }
+
+    @Test
+    void 중복된_presetKey는_저장시_하나로_합쳐진다() {
+        when(workspaceRepository.existsById(1L)).thenReturn(true);
+        when(workspaceMemberRepository.existsByWorkspaceIdAndUserId(1L, 10L)).thenReturn(true);
+        when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 10L)).thenReturn(Optional.empty());
+        when(toneSettingRepository.save(any(ToneSetting.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ToneSettingResponse response = toneSettingService.saveToneSetting(
+                1L, 10L, requestOf(List.of("beginner", "beginner"), null));
+
+        assertThat(response.getPresetKeys()).containsExactly("beginner");
     }
 
     @Test
@@ -133,24 +146,25 @@ class ToneSettingServiceTest {
         ToneSetting existing = ToneSetting.builder()
                 .workspaceId(1L)
                 .userId(10L)
-                .presetKey("beginner")
+                .presetKeys(List.of("beginner"))
                 .build();
         when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 10L)).thenReturn(Optional.of(existing));
         when(toneSettingRepository.save(any(ToneSetting.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        ToneSettingResponse response = toneSettingService.saveToneSetting(1L, 10L, requestOf("intermediate", null));
+        ToneSettingResponse response =
+                toneSettingService.saveToneSetting(1L, 10L, requestOf(List.of("intermediate"), null));
 
-        assertThat(response.getPresetKey()).isEqualTo("intermediate");
+        assertThat(response.getPresetKeys()).containsExactly("intermediate");
         assertThat(response.getCustomText()).isNull();
     }
 
     @Test
-    void presetKey가_유효하지_않으면_저장시_예외를_던진다() {
+    void presetKeys에_유효하지_않은_값이_있으면_저장시_예외를_던진다() {
         when(workspaceRepository.existsById(1L)).thenReturn(true);
         when(workspaceMemberRepository.existsByWorkspaceIdAndUserId(1L, 10L)).thenReturn(true);
 
-        assertThatThrownBy(() -> toneSettingService.saveToneSetting(1L, 10L, requestOf("guru", null)))
+        assertThatThrownBy(() -> toneSettingService.saveToneSetting(1L, 10L, requestOf(List.of("guru"), null)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }
