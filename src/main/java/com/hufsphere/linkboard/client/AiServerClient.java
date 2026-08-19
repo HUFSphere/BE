@@ -9,6 +9,8 @@ import com.hufsphere.linkboard.client.dto.FigmaIngestRequest;
 import com.hufsphere.linkboard.client.dto.FigmaIngestResponse;
 import com.hufsphere.linkboard.client.dto.GithubIngestRequest;
 import com.hufsphere.linkboard.client.dto.GithubIngestResponse;
+import com.hufsphere.linkboard.client.dto.GroupFeaturesRequest;
+import com.hufsphere.linkboard.client.dto.GroupFeaturesResponse;
 import com.hufsphere.linkboard.client.dto.LinkWorkItemsRequest;
 import com.hufsphere.linkboard.client.dto.LinkWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.NotionIngestRequest;
@@ -90,6 +92,19 @@ public class AiServerClient {
                     .body(LinkWorkItemsResponse.class);
         } catch (RestClientException e) {
             throw new SourceFetchFailedException("작업 연결에 실패했습니다");
+        }
+    }
+
+    public GroupFeaturesResponse groupFeatures(String lang) {
+        try {
+            return aiServerRestClient.post()
+                    .uri("/group-features")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new GroupFeaturesRequest(lang))
+                    .retrieve()
+                    .body(GroupFeaturesResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("기능 분류에 실패했습니다");
         }
     }
 

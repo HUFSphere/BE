@@ -1,14 +1,21 @@
 package com.hufsphere.linkboard.service;
 
 import com.hufsphere.linkboard.common.WorkItemStatusLabels;
+import com.hufsphere.linkboard.domain.Feature;
+import com.hufsphere.linkboard.domain.SourceConnection;
 import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.domain.WorkItem;
 import com.hufsphere.linkboard.domain.WorkItemLink;
 import com.hufsphere.linkboard.domain.Workspace;
+import com.hufsphere.linkboard.dto.DashboardFeaturesResponse;
+import com.hufsphere.linkboard.dto.DashboardSourcesResponse;
 import com.hufsphere.linkboard.dto.TeamDashboardResponse;
 import com.hufsphere.linkboard.dto.WorkItemDetailResponse;
 import com.hufsphere.linkboard.dto.WorkItemPageResponse;
 import com.hufsphere.linkboard.dto.WorkItemSummaryResponse;
+import com.hufsphere.linkboard.exception.WorkspaceNotFoundException;
+import com.hufsphere.linkboard.repository.FeatureRepository;
+import com.hufsphere.linkboard.repository.SourceConnectionRepository;
 import com.hufsphere.linkboard.repository.WorkItemLinkRepository;
 import com.hufsphere.linkboard.repository.WorkItemRepository;
 import com.hufsphere.linkboard.repository.WorkspaceRepository;
@@ -17,9 +24,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,9 +36,15 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class WorkItemService {
 
+    private static final int TOP_FEATURES = 3;
+    private static final int RECENT_ISSUES_PER_SOURCE = 3;
+    private static final String DONE_STATUS = "done";
+
     private final WorkItemRepository workItemRepository;
     private final WorkItemLinkRepository workItemLinkRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final FeatureRepository featureRepository;
+    private final SourceConnectionRepository sourceConnectionRepository;
 
     private static String resolveLang(String lang, Workspace workspace) {
         if (lang != null && !lang.isBlank()) {
@@ -187,5 +202,96 @@ public class WorkItemService {
                 .statusCounts(globalStatusCounts)
                 .members(memberStatuses)
                 .build();
+    }
+
+    public DashboardFeaturesResponse getFeatureProgress(Long workspaceId) {
+        requireWorkspace(workspaceId);
+
+        List<Feature> features = featureRepository.findByWorkspaceId(workspaceId);
+        Map<Long, List<WorkItem>> itemsByFeatureId = workItemRepository.findByWorkspaceId(workspaceId).stream()
+                .filter(item -> item.getFeatureId() != null)
+                .collect(Collectors.groupingBy(WorkItem::getFeatureId));
+
+        List<DashboardFeaturesResponse.FeatureProgress> progresses = features.stream()
+                .map(feature -> toFeatureProgress(feature, itemsByFeatureId.getOrDefault(feature.getId(), List.of())))
+                .sorted(Comparator.comparing(
+                        DashboardFeaturesResponse.FeatureProgress::getLastUpdatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .limit(TOP_FEATURES)
+                .collect(Collectors.toList());
+
+        return DashboardFeaturesResponse.builder().features(progresses).build();
+    }
+
+    private DashboardFeaturesResponse.FeatureProgress toFeatureProgress(Feature feature, List<WorkItem> items) {
+        int total = items.size();
+        int done = (int) items.stream().filter(item -> DONE_STATUS.equals(item.getStatus())).count();
+        LocalDateTime lastUpdatedAt = items.stream()
+                .map(WorkItem::getSourceUpdatedAt)
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+
+        return DashboardFeaturesResponse.FeatureProgress.builder()
+                .featureId(feature.getId())
+                .name(feature.getName())
+                .totalCount(total)
+                .doneCount(done)
+                .progress(calculateProgress(done, total))
+                .lastUpdatedAt(lastUpdatedAt)
+                .build();
+    }
+
+    public DashboardSourcesResponse getSourceProgress(Long workspaceId) {
+        requireWorkspace(workspaceId);
+
+        List<SourceConnection> connections = sourceConnectionRepository.findByWorkspaceId(workspaceId);
+        Map<Long, List<WorkItem>> itemsBySourceConnectionId = workItemRepository.findByWorkspaceId(workspaceId).stream()
+                .filter(item -> item.getSourceConnection() != null)
+                .collect(Collectors.groupingBy(item -> item.getSourceConnection().getId()));
+
+        List<DashboardSourcesResponse.SourceCard> cards = connections.stream()
+                .map(connection -> toSourceCard(connection, itemsBySourceConnectionId.getOrDefault(connection.getId(), List.of())))
+                .collect(Collectors.toList());
+
+        return DashboardSourcesResponse.builder().sources(cards).build();
+    }
+
+    private DashboardSourcesResponse.SourceCard toSourceCard(SourceConnection connection, List<WorkItem> items) {
+        int total = items.size();
+        int done = (int) items.stream().filter(item -> DONE_STATUS.equals(item.getStatus())).count();
+
+        List<DashboardSourcesResponse.RecentIssue> recentIssues = items.stream()
+                .sorted(Comparator.comparing(WorkItem::getSourceUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .limit(RECENT_ISSUES_PER_SOURCE)
+                .map(item -> DashboardSourcesResponse.RecentIssue.builder()
+                        .workItemId(item.getId())
+                        .title(item.getTitle())
+                        .status(item.getStatus())
+                        .sourceUrl(item.getSourceUrl())
+                        .sourceUpdatedAt(item.getSourceUpdatedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        return DashboardSourcesResponse.SourceCard.builder()
+                .sourceId(connection.getId())
+                .sourceType(connection.getSourceType() != null ? connection.getSourceType().getValue() : null)
+                .sourceRef(connection.getTargetRepoOrBoard())
+                .connStatus(connection.getStatus())
+                .totalCount(total)
+                .doneCount(done)
+                .progress(calculateProgress(done, total))
+                .recentIssues(recentIssues)
+                .build();
+    }
+
+    private double calculateProgress(int done, int total) {
+        return total == 0 ? 0.0 : (double) done / total;
+    }
+
+    private void requireWorkspace(Long workspaceId) {
+        if (!workspaceRepository.existsById(workspaceId)) {
+            throw new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다");
+        }
     }
 }

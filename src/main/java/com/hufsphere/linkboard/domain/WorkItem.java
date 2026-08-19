@@ -45,6 +45,11 @@ public class WorkItem {
     private LocalDateTime sourceUpdatedAt;
     private LocalDateTime createdAt;
 
+    // AI가 group-features로 분류한 기능(feature)의 id. 실제 연관관계(FK) 대신
+    // 다른 소스 참조 컬럼들(FigmaConnection.workspaceId 등)과 동일하게 단순 Long으로 둔다.
+    @Setter
+    private Long featureId;
+
     @PrePersist
     public void prePersist() {
         if (this.status == null) {

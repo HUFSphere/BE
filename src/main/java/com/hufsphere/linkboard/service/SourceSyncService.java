@@ -123,7 +123,7 @@ public class SourceSyncService {
         ExtractWorkItemsResponse extracted = aiServerClient.extractWorkItems(lang);
         LinkWorkItemsResponse linked = aiServerClient.linkWorkItems(lang, LINK_TOP_K);
 
-        workItemSyncService.replaceForWorkspace(sourceConnection.getWorkspace(), extracted.getWorkItems(), linked.getLinks());
+        workItemSyncService.replaceForWorkspace(sourceConnection.getWorkspace(), extracted.getWorkItems(), linked.getLinks(), lang);
     }
 
     private String resolveLang(SourceConnection sourceConnection) {
