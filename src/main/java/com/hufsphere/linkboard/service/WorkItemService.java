@@ -74,6 +74,7 @@ public class WorkItemService {
                             .itemType(target.getItemType())
                             .title(target.getTitle())
                             .sourceUrl(target.getSourceUrl())
+                            .linkReason(link.getLinkReason())
                             .build();
                 })
                 .collect(Collectors.toList());

@@ -8,8 +8,10 @@ import com.hufsphere.linkboard.domain.Feature;
 import com.hufsphere.linkboard.domain.SourceConnection;
 import com.hufsphere.linkboard.domain.SourceType;
 import com.hufsphere.linkboard.domain.WorkItem;
+import com.hufsphere.linkboard.domain.WorkItemLink;
 import com.hufsphere.linkboard.dto.DashboardFeaturesResponse;
 import com.hufsphere.linkboard.dto.DashboardSourcesResponse;
+import com.hufsphere.linkboard.dto.WorkItemDetailResponse;
 import com.hufsphere.linkboard.exception.WorkspaceNotFoundException;
 import com.hufsphere.linkboard.repository.FeatureRepository;
 import com.hufsphere.linkboard.repository.SourceConnectionRepository;
@@ -153,5 +155,30 @@ class WorkItemServiceTest {
                 .findFirst().orElseThrow();
         assertThat(notionCard.getTotalCount()).isEqualTo(1);
         assertThat(notionCard.getProgress()).isEqualTo(1.0);
+    }
+
+    @Test
+    void 작업_상세_조회시_연결된_항목의_linkReason이_함께_반환된다() {
+        WorkItem from = WorkItem.builder().title("Add JWT auth").status("done").build();
+        ReflectionTestUtils.setField(from, "id", 1L);
+
+        WorkItem to = WorkItem.builder().title("인증 방식 논의").status("done").build();
+        ReflectionTestUtils.setField(to, "id", 2L);
+
+        WorkItemLink link = WorkItemLink.builder()
+                .fromWorkItem(from)
+                .toWorkItem(to)
+                .linkSource("auto")
+                .linkReason("JWT 도입 배경을 논의한 회의록입니다")
+                .build();
+
+        when(workItemRepository.findById(1L)).thenReturn(java.util.Optional.of(from));
+        when(workItemLinkRepository.findByFromWorkItemIdOrToWorkItemId(1L, 1L)).thenReturn(List.of(link));
+
+        WorkItemDetailResponse response = workItemService.getWorkItemDetail(1L, "ko");
+
+        assertThat(response.getLinkedItems()).hasSize(1);
+        assertThat(response.getLinkedItems().get(0).getLinkReason()).isEqualTo("JWT 도입 배경을 논의한 회의록입니다");
+        assertThat(response.getLinkedItems().get(0).getTitle()).isEqualTo("인증 방식 논의");
     }
 }

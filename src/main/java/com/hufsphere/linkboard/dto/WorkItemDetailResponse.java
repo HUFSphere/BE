@@ -38,5 +38,6 @@ public class WorkItemDetailResponse {
         private String itemType;
         private String title;
         private String sourceUrl;
+        private String linkReason;
     }
 }

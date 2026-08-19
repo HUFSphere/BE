@@ -59,7 +59,8 @@ public class WorkItemController {
                                             "sourceType": "notion",
                                             "itemType": "page",
                                             "title": "인증 방식 논의",
-                                            "sourceUrl": "https://notion.so/auth-discussion"
+                                            "sourceUrl": "https://notion.so/auth-discussion",
+                                            "linkReason": "JWT 도입 배경을 논의한 회의록으로, 이 PR의 결정 근거가 됩니다"
                                           }
                                         ]
                                       }
