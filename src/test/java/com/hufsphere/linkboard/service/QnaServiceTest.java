@@ -209,4 +209,18 @@ class QnaServiceTest {
         verify(aiServerClient).ask(any(), any(), any(), any());
         verify(aiServerClient, times(0)).qna(any(), any(), any(), any(), any());
     }
+
+    @Test
+    void contextWorkItemIds가_빈_배열이어도_생략과_동일하게_전역_검색_ask를_호출한다() {
+        when(workspaceRepository.existsById(1L)).thenReturn(true);
+        when(aiServerClient.ask(any(), any(), any(), any())).thenReturn(askResponseOf("답변"));
+
+        QnaRequest request = requestOf("질문", "ko");
+        ReflectionTestUtils.setField(request, "contextWorkItemIds", List.of());
+
+        qnaService.ask(1L, null, request);
+
+        verify(aiServerClient).ask(any(), any(), any(), any());
+        verify(aiServerClient, times(0)).qna(any(), any(), any(), any(), any());
+    }
 }

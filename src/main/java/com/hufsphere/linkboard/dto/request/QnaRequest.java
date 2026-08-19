@@ -15,7 +15,8 @@ public class QnaRequest {
     @NotBlank(message = "question과 lang은 필수입니다")
     private String question;
 
-    @Schema(description = "여러 작업(기능) 맥락에서 질문 시 그 작업 ID 목록. 지정하면 이 작업들로만 답변 범위를 좁힌다. 전역이면 생략", example = "[142, 156]")
+    @Schema(description = "여러 작업(기능) 맥락에서 질문 시 그 작업 ID 목록. 지정하면 이 작업들로만 답변 범위를 좁힌다. "
+            + "생략하거나 빈 배열([])을 보내면 둘 다 동일하게 전역(모든 작업 대상 임베딩 검색)으로 처리된다.", example = "[142, 156]")
     private List<Long> contextWorkItemIds;
 
     @Schema(
