@@ -2,6 +2,7 @@ package com.hufsphere.linkboard.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,6 +45,8 @@ class WorkItemSyncServiceTest {
     private FeatureRepository featureRepository;
     @Mock
     private AiServerClient aiServerClient;
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private WorkItemSyncService workItemSyncService;
@@ -278,5 +281,29 @@ class WorkItemSyncServiceTest {
 
         WorkItem brandNew = distinctSavedItems.stream().filter(i -> "처음 보는 프레임".equals(i.getTitle())).findFirst().orElseThrow();
         assertThat(brandNew.getStatus()).isEqualTo("todo"); // 기존 기록이 없으니 AI 추측을 그대로 씀
+
+        verify(notificationService).notifyNewWorkItemsDetected(workspace, 1); // "처음 보는 프레임" 1건만 신규
+    }
+
+    @Test
+    void 워크스페이스의_첫_동기화면_모든_항목이_새로_잡히므로_새_작업_항목_알림을_보내지_않는다() {
+        when(sourceConnectionRepository.findByWorkspaceId(1L)).thenReturn(List.of(githubConnection));
+        when(workItemRepository.findByWorkspaceIdOrderBySourceUpdatedAtDesc(1L)).thenReturn(List.of());
+        when(workItemRepository.save(any(WorkItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        GroupFeaturesResponse emptyResponse = new GroupFeaturesResponse();
+        emptyResponse.setFeatures(List.of());
+        when(aiServerClient.groupFeatures("ko")).thenReturn(emptyResponse);
+
+        WorkItemDto item0 = new WorkItemDto();
+        item0.setSourceType("github");
+        item0.setItemType("pr");
+        item0.setTitle("Add JWT auth");
+        item0.setStatus("done");
+        item0.setUrl("https://github.com/pr/1");
+
+        workItemSyncService.replaceForWorkspace(workspace, List.of(item0), List.of(), "ko", SourceType.GITHUB, Map.of(), Map.of());
+
+        verify(notificationService, org.mockito.Mockito.never()).notifyNewWorkItemsDetected(any(), anyInt());
     }
 }

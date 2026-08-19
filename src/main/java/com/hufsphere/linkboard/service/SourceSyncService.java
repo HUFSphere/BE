@@ -51,6 +51,7 @@ public class SourceSyncService {
     private final NotionCrawlerClient notionCrawlerClient;
     private final FigmaCrawlerClient figmaCrawlerClient;
     private final WorkItemSyncService workItemSyncService;
+    private final NotificationService notificationService;
 
     public SourceSyncResponse sync(Long sourceId) {
         SourceConnection sourceConnection = sourceConnectionRepository.findById(sourceId)
@@ -72,11 +73,13 @@ public class SourceSyncService {
             // 상태를 failed로 되돌린 뒤 원래 예외를 그대로 다시 던진다 (응답 계약은 그대로 유지).
             sourceConnection.failSyncing();
             sourceConnectionRepository.save(sourceConnection);
+            notificationService.notifySourceSyncResult(sourceConnection.getWorkspace(), sourceConnection.getSourceType(), false);
             throw e;
         }
 
         sourceConnection.completeSyncing(LocalDateTime.now());
         sourceConnectionRepository.save(sourceConnection);
+        notificationService.notifySourceSyncResult(sourceConnection.getWorkspace(), sourceConnection.getSourceType(), true);
 
         return SourceSyncResponse.of(sourceConnection, startedAt);
     }

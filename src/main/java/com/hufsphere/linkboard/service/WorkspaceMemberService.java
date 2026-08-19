@@ -47,6 +47,7 @@ public class WorkspaceMemberService {
     private final SourceConnectionRepository sourceConnectionRepository;
     private final WorkItemRepository workItemRepository;
     private final WorkItemLinkRepository workItemLinkRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public WorkspaceMemberAddResponse addMember(
@@ -448,6 +449,8 @@ public class WorkspaceMemberService {
                         .build();
 
         workspaceMemberRepository.save(membership);
+
+        notificationService.notifyMemberInviteAccepted(workspace, user);
 
         return new WorkspaceJoinResponse(
                 workspace.getId(),

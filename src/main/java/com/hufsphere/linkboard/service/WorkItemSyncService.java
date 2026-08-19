@@ -38,6 +38,7 @@ public class WorkItemSyncService {
     private final SourceConnectionRepository sourceConnectionRepository;
     private final FeatureRepository featureRepository;
     private final AiServerClient aiServerClient;
+    private final NotificationService notificationService;
 
     // AI 서버의 extract/link/group-features는 요청을 보낸 소스 하나가 아니라 워크스페이스에
     // 색인된 전체(github+notion+...)를 대상으로 응답한다 (라이브 검증으로 확인됨).
@@ -69,6 +70,15 @@ public class WorkItemSyncService {
 
         GroupFeaturesResponse grouped = aiServerClient.groupFeatures(lang);
         saveFeatures(workspace, grouped.getFeatures(), indexToItem);
+
+        // 워크스페이스에 이번이 첫 동기화(어떤 소스도 아직 색인된 적 없음)면 모든 항목이 "새로" 잡혀
+        // 알림으로선 의미가 없으므로 건너뛴다. 두 번째 소스부터는 이전에 없던 URL만 진짜 신규로 본다.
+        if (!previousByUrl.isEmpty()) {
+            long newItemCount = indexToItem.values().stream()
+                    .filter(item -> !previousByUrl.containsKey(item.getSourceUrl()))
+                    .count();
+            notificationService.notifyNewWorkItemsDetected(workspace, (int) newItemCount);
+        }
     }
 
     private Map<Integer, WorkItem> saveWorkItems(Workspace workspace, Map<SourceType, SourceConnection> connectionsByType,
