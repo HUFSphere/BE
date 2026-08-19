@@ -80,19 +80,28 @@ public class NotionOAuthController {
     })
     @GetMapping("/callback")
     public ResponseEntity<Void> callback(
-            @Parameter(description = "Notion이 발급한 인가 코드")
-            @RequestParam String code,
+            @Parameter(description = "Notion이 발급한 인가 코드. 사용자가 동의 화면에서 취소하면 없음")
+            @RequestParam(required = false) String code,
             @Parameter(description = "authorize 호출 시 실어 보낸 state (ws-{workspaceId})", example = "ws-1")
-            @RequestParam String state
+            @RequestParam String state,
+            @Parameter(description = "사용자가 취소했을 때 Notion이 대신 실어 보내는 값(예: access_denied)")
+            @RequestParam(required = false) String error
     ) {
         Long workspaceId = Long.parseLong(state.substring(STATE_PREFIX.length()));
 
-        String status = "success";
-        try {
-            notionOAuthService.connect(workspaceId, code);
-        } catch (RuntimeException ex) {
-            log.error("Notion 콜백 처리 실패: workspaceId={}", workspaceId, ex);
+        String status;
+        if (error != null || code == null || code.isBlank()) {
+            // 사용자가 Notion 동의 화면에서 "취소"를 누른 경우. code 없이 error 파라미터만 온다.
+            log.info("Notion 연결 취소/실패: workspaceId={}, error={}", workspaceId, error);
             status = "error";
+        } else {
+            status = "success";
+            try {
+                notionOAuthService.connect(workspaceId, code);
+            } catch (RuntimeException ex) {
+                log.error("Notion 콜백 처리 실패: workspaceId={}", workspaceId, ex);
+                status = "error";
+            }
         }
 
         URI landingUri = UriComponentsBuilder.fromUriString(frontendUrl)
