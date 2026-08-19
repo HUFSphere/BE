@@ -176,6 +176,22 @@ class QnaServiceTest {
     }
 
     @Test
+    void 톤_customText가_아랍어면_요청_lang_대신_아랍어로_AI_서버를_호출한다() {
+        when(workspaceRepository.existsById(1L)).thenReturn(true);
+        when(toneSettingRepository.findByUserId(10L))
+                .thenReturn(Optional.of(ToneSetting.builder()
+                        .userId(10L)
+                        .presetKeys(List.of("beginner"))
+                        .customText("أرجو أن تجيب باللغة العربية فقط من فضلك")
+                        .build()));
+        when(aiServerClient.ask(any(), any(), any(), any())).thenReturn(askResponseOf("답변"));
+
+        qnaService.ask(1L, 10L, requestOf("질문", "ko"));
+
+        verify(aiServerClient).ask(eq("질문"), eq("ar"), any(), eq(List.of()));
+    }
+
+    @Test
     void contextWorkItemIds가_없으면_기존처럼_전역_검색_ask를_호출한다() {
         when(workspaceRepository.existsById(1L)).thenReturn(true);
         when(aiServerClient.ask(any(), any(), any(), any())).thenReturn(askResponseOf("답변"));

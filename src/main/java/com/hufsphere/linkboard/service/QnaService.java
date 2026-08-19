@@ -35,6 +35,8 @@ public class QnaService {
         }
 
         String tone = toneSettingService.resolveToneText(requesterId, request.getLang());
+        // 톤 커스텀 텍스트가 문자 체계가 다른 언어로 쓰여 있으면(예: 아랍어) 요청 lang보다 그걸 우선한다.
+        String effectiveLang = toneSettingService.detectLanguageOverride(requesterId).orElse(request.getLang());
 
         Map<Long, TeamNorm> teamNormsById = teamNormRepository.findByWorkspaceIdOrderByIdAsc(workspaceId).stream()
                 .collect(Collectors.toMap(TeamNorm::getId, Function.identity()));
@@ -50,9 +52,9 @@ public class QnaService {
             List<AiChunkDto> chunks = workItemRepository.findByIdInAndWorkspaceId(contextWorkItemIds, workspaceId).stream()
                     .map(this::toChunk)
                     .toList();
-            askResponse = aiServerClient.qna(request.getQuestion(), request.getLang(), tone, teamNorms, chunks);
+            askResponse = aiServerClient.qna(request.getQuestion(), effectiveLang, tone, teamNorms, chunks);
         } else {
-            askResponse = aiServerClient.ask(request.getQuestion(), request.getLang(), tone, teamNorms);
+            askResponse = aiServerClient.ask(request.getQuestion(), effectiveLang, tone, teamNorms);
         }
 
         return QnaResponse.from(askResponse, teamNormsById);

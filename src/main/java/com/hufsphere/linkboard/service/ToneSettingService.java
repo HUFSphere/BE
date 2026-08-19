@@ -1,5 +1,6 @@
 package com.hufsphere.linkboard.service;
 
+import com.hufsphere.linkboard.common.LanguageScriptDetector;
 import com.hufsphere.linkboard.common.TonePresets;
 import com.hufsphere.linkboard.domain.AppUser;
 import com.hufsphere.linkboard.domain.ToneSetting;
@@ -10,6 +11,7 @@ import com.hufsphere.linkboard.exception.InvalidCredentialsException;
 import com.hufsphere.linkboard.repository.AppUserRepository;
 import com.hufsphere.linkboard.repository.ToneSettingRepository;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -86,6 +88,18 @@ public class ToneSettingService {
         }
 
         return combinedDescription + " " + customText.trim();
+    }
+
+    // 5. 사용자가 톤 커스텀 텍스트를 문자 체계가 다른 언어(한글/한자·가나/아랍/키릴 등)로 직접 적었으면,
+    // 그게 요청 파라미터의 lang보다 더 신뢰할 수 있는 "실제 원하는 답변 언어" 신호다. LLM에게 판별을
+    // 맡기는 방식은 신뢰할 수 없어서(라이브 검증됨) 유니코드 블록으로 결정적으로 감지한다.
+    public Optional<String> detectLanguageOverride(Long userId) {
+        if (userId == null) {
+            return Optional.empty();
+        }
+        return toneSettingRepository.findByUserId(userId)
+                .map(ToneSetting::getCustomText)
+                .flatMap(LanguageScriptDetector::detect);
     }
 
     private String resolveRequesterNativeLang(Long requesterId) {

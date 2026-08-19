@@ -142,4 +142,35 @@ class ToneSettingServiceTest {
         assertThatThrownBy(() -> toneSettingService.saveToneSetting(10L, requestOf(List.of("guru"), null)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void customText가_다른_문자체계_언어면_언어_오버라이드를_감지한다() {
+        ToneSetting existing = ToneSetting.builder()
+                .userId(10L)
+                .presetKeys(List.of("beginner"))
+                .customText("أرجو أن تجيب باللغة العربية فقط من فضلك")
+                .build();
+        when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.of(existing));
+
+        assertThat(toneSettingService.detectLanguageOverride(10L)).contains("ar");
+    }
+
+    @Test
+    void customText가_없거나_로마자_계열이면_언어_오버라이드가_없다() {
+        when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.empty());
+        assertThat(toneSettingService.detectLanguageOverride(10L)).isEmpty();
+
+        ToneSetting englishCustom = ToneSetting.builder()
+                .userId(20L)
+                .presetKeys(List.of("beginner"))
+                .customText("Please keep it short")
+                .build();
+        when(toneSettingRepository.findByUserId(20L)).thenReturn(Optional.of(englishCustom));
+        assertThat(toneSettingService.detectLanguageOverride(20L)).isEmpty();
+    }
+
+    @Test
+    void 로그인하지_않았으면_언어_오버라이드를_감지하지_않는다() {
+        assertThat(toneSettingService.detectLanguageOverride(null)).isEmpty();
+    }
 }
