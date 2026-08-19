@@ -54,7 +54,20 @@ public class QnaController {
                                             "url": "https://github.com/org/repo/pull/142"
                                           }
                                         ],
-                                        "teamNorm": null
+                                        "followUpQuestions": [
+                                          "JWT의 만료 시간은 어떻게 설정되어 있나요?",
+                                          "RefreshToken은 어디에 저장되나요?",
+                                          "세션 방식과 비교했을 때 단점은 없나요?",
+                                          "이 결정에 관련된 PR은 어디서 볼 수 있나요?"
+                                        ],
+                                        "relatedTeamNorms": [
+                                          {
+                                            "id": 3,
+                                            "category": "CODE_REVIEW",
+                                            "content": "PR은 항상 리뷰어 2명 이상 승인 후 머지한다",
+                                            "reason": "JWT 도입도 이 PR 리뷰 절차를 거쳐 머지되었습니다"
+                                          }
+                                        ]
                                       }
                                     }"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

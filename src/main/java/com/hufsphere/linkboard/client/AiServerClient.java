@@ -16,6 +16,9 @@ import com.hufsphere.linkboard.client.dto.LinkWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.NotionIngestRequest;
 import com.hufsphere.linkboard.client.dto.NotionIngestResponse;
 import com.hufsphere.linkboard.client.dto.NotionPage;
+import com.hufsphere.linkboard.client.dto.AiChunkDto;
+import com.hufsphere.linkboard.client.dto.QnaAiRequest;
+import com.hufsphere.linkboard.client.dto.TeamNormInputDto;
 import com.hufsphere.linkboard.exception.SourceFetchFailedException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -108,12 +111,27 @@ public class AiServerClient {
         }
     }
 
-    public AskResponse ask(String question, String lang, String tone) {
+    public AskResponse ask(String question, String lang, String tone, List<TeamNormInputDto> teamNorms) {
         try {
             return aiServerRestClient.post()
                     .uri("/ask")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new AskRequest(question, lang, tone))
+                    .body(new AskRequest(question, lang, tone, teamNorms))
+                    .retrieve()
+                    .body(AskResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("AI 서버 호출에 실패했습니다");
+        }
+    }
+
+    // 특정 work item(contextWorkItemIds)으로 질문 범위를 좁힐 때 사용. /ask와 달리 전역 임베딩
+    // 검색을 하지 않고, 넘겨준 chunks만으로 답변을 생성한다. 응답 모양은 /ask와 동일해서 AskResponse를 재사용한다.
+    public AskResponse qna(String question, String lang, String tone, List<TeamNormInputDto> teamNorms, List<AiChunkDto> chunks) {
+        try {
+            return aiServerRestClient.post()
+                    .uri("/qna")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new QnaAiRequest(question, lang, tone, teamNorms, chunks))
                     .retrieve()
                     .body(AskResponse.class);
         } catch (RestClientException e) {

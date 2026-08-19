@@ -12,4 +12,6 @@ public class AskResponse {
 
     private String answer;
     private List<AskSourceItem> sources;
+    private List<String> followUpQuestions;
+    private List<TeamNormMatchDto> relatedTeamNorms;
 }

@@ -19,6 +19,10 @@ public interface WorkItemRepository extends JpaRepository<WorkItem, Long> {
     // MapService에서 사용하는 sourceType별 조회
     List<WorkItem> findByWorkspaceIdAndSourceTypeOrderBySourceUpdatedAtDesc(Long workspaceId, SourceType sourceType);
 
+    // Q&A에서 contextWorkItemIds로 질문 범위를 좁힐 때 사용. workspaceId를 같이 걸어서
+    // 다른 워크스페이스의 work item이 섞여 들어오는 것을 막는다.
+    List<WorkItem> findByIdInAndWorkspaceId(List<Long> ids, Long workspaceId);
+
     // 5.7 대시보드 최근 활동 조회용
     List<WorkItem> findTop3ByWorkspaceIdOrderBySourceUpdatedAtDesc(Long workspaceId);
 
