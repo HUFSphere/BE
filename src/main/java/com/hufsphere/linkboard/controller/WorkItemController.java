@@ -1,6 +1,9 @@
 package com.hufsphere.linkboard.controller;
 
+import com.hufsphere.linkboard.common.ApiResponse;
 import com.hufsphere.linkboard.common.ErrorResponse;
+import com.hufsphere.linkboard.dto.DashboardFeaturesResponse;
+import com.hufsphere.linkboard.dto.DashboardSourcesResponse;
 import com.hufsphere.linkboard.dto.TeamDashboardResponse;
 import com.hufsphere.linkboard.dto.WorkItemDetailResponse;
 import com.hufsphere.linkboard.dto.WorkItemPageResponse;
@@ -249,5 +252,85 @@ public class WorkItemController {
                 "message", "팀 현황판 조회 성공",
                 "data", response
         ));
+    }
+
+    @Operation(summary = "기능별 진행률 조회", description = "AI가 group-features로 분류한 기능 중 가장 최근에 업데이트된 상위 3개(A/B/C)의 진행률을 조회합니다.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "기능별 진행률 조회 성공",
+                    content = @Content(schema = @Schema(implementation = DashboardFeaturesResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "code": "DASHBOARD_FEATURES_OK",
+                                      "message": "기능별 진행률 조회 성공",
+                                      "data": {
+                                        "features": [
+                                          {
+                                            "featureId": 1,
+                                            "name": "인증/로그인",
+                                            "totalCount": 5,
+                                            "doneCount": 3,
+                                            "progress": 0.6,
+                                            "lastUpdatedAt": "2026-08-18T09:00:00"
+                                          }
+                                        ]
+                                      }
+                                    }"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "워크스페이스를 찾을 수 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    })
+    @GetMapping("/workspaces/{workspaceId}/dashboard/features")
+    public ResponseEntity<ApiResponse<DashboardFeaturesResponse>> getFeatureDashboard(@PathVariable Long workspaceId) {
+        DashboardFeaturesResponse response = workItemService.getFeatureProgress(workspaceId);
+        return ResponseEntity.ok(ApiResponse.success("DASHBOARD_FEATURES_OK", "기능별 진행률 조회 성공", response));
+    }
+
+    @Operation(summary = "소스별 현황 조회", description = "워크스페이스에 연동된 Figma/Github/Notion 소스별 상태·진행률·최근 이슈를 조회합니다.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "소스별 현황 조회 성공",
+                    content = @Content(schema = @Schema(implementation = DashboardSourcesResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "code": "DASHBOARD_SOURCES_OK",
+                                      "message": "소스별 현황 조회 성공",
+                                      "data": {
+                                        "sources": [
+                                          {
+                                            "sourceId": 1,
+                                            "sourceType": "github",
+                                            "sourceRef": "pypa/sampleproject",
+                                            "connStatus": "CONNECTED",
+                                            "totalCount": 30,
+                                            "doneCount": 18,
+                                            "progress": 0.6,
+                                            "recentIssues": [
+                                              {
+                                                "workItemId": 142,
+                                                "title": "Add JWT auth",
+                                                "status": "done",
+                                                "sourceUrl": "https://github.com/org/repo/pull/142",
+                                                "sourceUpdatedAt": "2026-08-18T09:00:00"
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "워크스페이스를 찾을 수 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    })
+    @GetMapping("/workspaces/{workspaceId}/dashboard/sources")
+    public ResponseEntity<ApiResponse<DashboardSourcesResponse>> getSourceDashboard(@PathVariable Long workspaceId) {
+        DashboardSourcesResponse response = workItemService.getSourceProgress(workspaceId);
+        return ResponseEntity.ok(ApiResponse.success("DASHBOARD_SOURCES_OK", "소스별 현황 조회 성공", response));
     }
 }
