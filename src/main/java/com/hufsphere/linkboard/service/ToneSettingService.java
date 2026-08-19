@@ -34,22 +34,25 @@ public class ToneSettingService {
                 .toList();
     }
 
-    // 3. 톤 설정 조회. 저장된 설정이 없으면 기본값(beginner)을 에러 없이 반환한다.
-    // 워크스페이스 단위가 아니라 사용자 개인 단위 설정이라, 로그인만 되어 있으면(컨트롤러에서 검증)
-    // 워크스페이스 소속 여부와 무관하게 조회/저장할 수 있다.
+    // 3. 톤 설정 조회. 저장된 설정이 없으면 기본값("선택 안 함" = 빈 presetKeys, customText null)을
+    // 에러 없이 반환한다. 워크스페이스 단위가 아니라 사용자 개인 단위 설정이라, 로그인만 되어 있으면
+    // (컨트롤러에서 검증) 워크스페이스 소속 여부와 무관하게 조회/저장할 수 있다.
     public ToneSettingResponse getToneSetting(Long userId) {
         return toneSettingRepository.findByUserId(userId)
                 .map(ToneSettingResponse::from)
                 .orElseGet(ToneSettingResponse::defaultResponse);
     }
 
-    // 2. 톤 설정 저장(upsert). beginner/intermediate/expert 중 하나 이상 중복 선택 가능
+    // 2. 톤 설정 저장(upsert). concise/detailed/friendly 중 0개 이상 중복 선택 가능(프리셋 없이
+    // customText만 저장하는 것도 허용).
     @Transactional
     public ToneSettingResponse saveToneSetting(Long userId, ToneSettingRequest request) {
-        List<String> presetKeys = request.getPresetKeys().stream().distinct().toList();
+        List<String> presetKeys = request.getPresetKeys() != null
+                ? request.getPresetKeys().stream().distinct().toList()
+                : List.of();
         for (String presetKey : presetKeys) {
             if (!TonePresets.isValidPresetKey(presetKey)) {
-                throw new IllegalArgumentException("presetKeys는 beginner/intermediate/expert로만 구성되어야 합니다");
+                throw new IllegalArgumentException("presetKeys는 concise/detailed/friendly로만 구성되어야 합니다");
             }
         }
 
@@ -65,9 +68,10 @@ public class ToneSettingService {
     }
 
     // 4. Q&A 호출에 반영할 톤 문자열 구성. 선택된 프리셋 전부의 설명을 이어붙이고 customText를 덧붙인다.
-    // 로그인하지 않았거나 저장된 설정이 없으면 beginner 기본값을 사용한다.
+    // 로그인하지 않았거나 저장된 설정이 없거나 "선택 안 함" 상태면 빈 문자열을 반환해서(프리셋 미적용)
+    // AI가 기존 기본 동작 그대로 답하게 한다.
     public String resolveToneText(Long userId, String lang) {
-        List<String> presetKeys = List.of(TonePresets.DEFAULT_PRESET_KEY);
+        List<String> presetKeys = List.of();
         String customText = null;
 
         if (userId != null) {
@@ -85,6 +89,9 @@ public class ToneSettingService {
 
         if (customText == null || customText.isBlank()) {
             return combinedDescription;
+        }
+        if (combinedDescription.isBlank()) {
+            return customText.trim();
         }
 
         return combinedDescription + " " + customText.trim();

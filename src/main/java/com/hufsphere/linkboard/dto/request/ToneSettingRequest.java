@@ -1,7 +1,6 @@
 package com.hufsphere.linkboard.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.Getter;
@@ -13,10 +12,10 @@ import lombok.NoArgsConstructor;
 public class ToneSettingRequest {
 
     @Schema(
-            description = "프리셋 키 목록. beginner/intermediate/expert 중 하나 이상 중복 선택 가능",
-            example = "[\"beginner\", \"expert\"]"
+            description = "프리셋 키 목록. concise/detailed/friendly 중 0개 이상 중복 선택 가능. "
+                    + "프리셋 없이 customText만으로도 저장할 수 있어 빈 배열(또는 생략)도 허용한다",
+            example = "[\"concise\"]"
     )
-    @NotEmpty(message = "presetKeys는 최소 1개 이상이어야 합니다")
     private List<String> presetKeys;
 
     @Schema(description = "사용자 추가 텍스트 (최대 500자)", example = "특히 Spring 관련 결정은 더 자세히 설명해주세요")

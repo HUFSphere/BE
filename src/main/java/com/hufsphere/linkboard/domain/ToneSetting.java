@@ -26,8 +26,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ToneSetting {
 
-    public static final String DEFAULT_PRESET_KEY = "beginner";
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -35,7 +33,8 @@ public class ToneSetting {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    // beginner/intermediate/expert 중 하나 이상 중복 선택 가능
+    // concise/detailed/friendly 중 0개 이상 중복 선택 가능. 아무것도 선택하지 않은 "선택 안 함"
+    // 상태도 유효하므로(customText만으로 저장 가능) 빈 리스트를 그대로 허용한다.
     @Convert(converter = StringListConverter.class)
     @Column(name = "preset_keys", nullable = false, length = 100)
     private List<String> presetKeys;
@@ -52,12 +51,12 @@ public class ToneSetting {
     @Builder
     private ToneSetting(Long userId, List<String> presetKeys, String customText) {
         this.userId = userId;
-        this.presetKeys = (presetKeys != null && !presetKeys.isEmpty()) ? presetKeys : List.of(DEFAULT_PRESET_KEY);
+        this.presetKeys = presetKeys != null ? presetKeys : List.of();
         this.customText = customText;
     }
 
     public void update(List<String> presetKeys, String customText) {
-        this.presetKeys = (presetKeys != null && !presetKeys.isEmpty()) ? presetKeys : List.of(DEFAULT_PRESET_KEY);
+        this.presetKeys = presetKeys != null ? presetKeys : List.of();
         this.customText = customText;
         this.updatedAt = LocalDateTime.now();
     }

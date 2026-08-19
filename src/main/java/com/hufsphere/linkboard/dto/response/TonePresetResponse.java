@@ -11,7 +11,7 @@ import lombok.Getter;
 @Schema(description = "톤 프리셋")
 public class TonePresetResponse {
 
-    @Schema(description = "프리셋 키. 톤 설정 저장 시 presetKeys에 하나 이상 담아 보낸다", example = "beginner")
+    @Schema(description = "프리셋 키. 톤 설정 저장 시 presetKeys에 0개 이상 담아 보낸다", example = "concise")
     private final String presetKey;
 
     @Schema(description = "프리셋 라벨", example = "이 팀이 처음이에요")

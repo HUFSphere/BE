@@ -43,12 +43,18 @@ class ToneSettingServiceTest {
     @Test
     void 프리셋_목록은_언어별로_다르게_반환된다() {
         List<TonePresetResponse> ko = toneSettingService.getPresets(null, "ko");
-        List<TonePresetResponse> vi = toneSettingService.getPresets(null, "vi");
+        List<TonePresetResponse> en = toneSettingService.getPresets(null, "en");
 
         assertThat(ko).extracting(TonePresetResponse::getPresetKey)
-                .containsExactly("beginner", "intermediate", "expert");
-        assertThat(ko.get(0).getLabel()).isEqualTo("이 팀이 처음이에요");
-        assertThat(vi.get(0).getLabel()).isEqualTo("Tôi mới vào team");
+                .containsExactly("concise", "detailed", "friendly");
+        assertThat(ko.get(0).getLabel()).isEqualTo("간결하게");
+        assertThat(en.get(0).getLabel()).isEqualTo("Concise");
+    }
+
+    @Test
+    void 지원하지_않는_언어는_영어로_대체된다() {
+        List<TonePresetResponse> other = toneSettingService.getPresets(null, "de");
+        assertThat(other.get(0).getLabel()).isEqualTo("Concise");
     }
 
     @Test
@@ -62,7 +68,7 @@ class ToneSettingServiceTest {
 
         List<TonePresetResponse> presets = toneSettingService.getPresets(1L, null);
 
-        assertThat(presets.get(0).getLabel()).isEqualTo("I'm new to this team");
+        assertThat(presets.get(0).getLabel()).isEqualTo("Concise");
     }
 
     @Test
@@ -72,12 +78,12 @@ class ToneSettingServiceTest {
     }
 
     @Test
-    void 톤_설정이_없으면_기본값을_에러없이_반환한다() {
+    void 톤_설정이_없으면_선택_안_함_기본값을_에러없이_반환한다() {
         when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.empty());
 
         ToneSettingResponse response = toneSettingService.getToneSetting(10L);
 
-        assertThat(response.getPresetKeys()).containsExactly("beginner");
+        assertThat(response.getPresetKeys()).isEmpty();
         assertThat(response.getCustomText()).isNull();
         assertThat(response.getUpdatedAt()).isNull();
     }
@@ -86,13 +92,13 @@ class ToneSettingServiceTest {
     void 톤_설정은_워크스페이스와_무관하게_사용자_단위로_조회된다() {
         ToneSetting existing = ToneSetting.builder()
                 .userId(10L)
-                .presetKeys(List.of("expert"))
+                .presetKeys(List.of("friendly"))
                 .build();
         when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.of(existing));
 
         ToneSettingResponse response = toneSettingService.getToneSetting(10L);
 
-        assertThat(response.getPresetKeys()).containsExactly("expert");
+        assertThat(response.getPresetKeys()).containsExactly("friendly");
     }
 
     @Test
@@ -102,10 +108,35 @@ class ToneSettingServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         ToneSettingResponse response = toneSettingService.saveToneSetting(
-                10L, requestOf(List.of("beginner", "expert"), "Spring 결정은 더 자세히 설명해주세요"));
+                10L, requestOf(List.of("concise", "friendly"), "Spring 결정은 더 자세히 설명해주세요"));
 
-        assertThat(response.getPresetKeys()).containsExactly("beginner", "expert");
+        assertThat(response.getPresetKeys()).containsExactly("concise", "friendly");
         assertThat(response.getCustomText()).isEqualTo("Spring 결정은 더 자세히 설명해주세요");
+    }
+
+    @Test
+    void 프리셋_없이_customText만으로도_저장할_수_있다() {
+        when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.empty());
+        when(toneSettingRepository.save(any(ToneSetting.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ToneSettingResponse response = toneSettingService.saveToneSetting(
+                10L, requestOf(List.of(), "이모지 많이 써주세요"));
+
+        assertThat(response.getPresetKeys()).isEmpty();
+        assertThat(response.getCustomText()).isEqualTo("이모지 많이 써주세요");
+    }
+
+    @Test
+    void presetKeys가_null이어도_저장된다() {
+        when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.empty());
+        when(toneSettingRepository.save(any(ToneSetting.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ToneSettingResponse response = toneSettingService.saveToneSetting(10L, requestOf(null, "짧게"));
+
+        assertThat(response.getPresetKeys()).isEmpty();
+        assertThat(response.getCustomText()).isEqualTo("짧게");
     }
 
     @Test
@@ -115,25 +146,25 @@ class ToneSettingServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         ToneSettingResponse response = toneSettingService.saveToneSetting(
-                10L, requestOf(List.of("beginner", "beginner"), null));
+                10L, requestOf(List.of("concise", "concise"), null));
 
-        assertThat(response.getPresetKeys()).containsExactly("beginner");
+        assertThat(response.getPresetKeys()).containsExactly("concise");
     }
 
     @Test
     void 이미_설정이_있으면_저장시_갱신된다() {
         ToneSetting existing = ToneSetting.builder()
                 .userId(10L)
-                .presetKeys(List.of("beginner"))
+                .presetKeys(List.of("concise"))
                 .build();
         when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.of(existing));
         when(toneSettingRepository.save(any(ToneSetting.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         ToneSettingResponse response =
-                toneSettingService.saveToneSetting(10L, requestOf(List.of("intermediate"), null));
+                toneSettingService.saveToneSetting(10L, requestOf(List.of("detailed"), null));
 
-        assertThat(response.getPresetKeys()).containsExactly("intermediate");
+        assertThat(response.getPresetKeys()).containsExactly("detailed");
         assertThat(response.getCustomText()).isNull();
     }
 
@@ -147,7 +178,7 @@ class ToneSettingServiceTest {
     void customText가_다른_문자체계_언어면_언어_오버라이드를_감지한다() {
         ToneSetting existing = ToneSetting.builder()
                 .userId(10L)
-                .presetKeys(List.of("beginner"))
+                .presetKeys(List.of("concise"))
                 .customText("أرجو أن تجيب باللغة العربية فقط من فضلك")
                 .build();
         when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.of(existing));
@@ -162,7 +193,7 @@ class ToneSettingServiceTest {
 
         ToneSetting englishCustom = ToneSetting.builder()
                 .userId(20L)
-                .presetKeys(List.of("beginner"))
+                .presetKeys(List.of("concise"))
                 .customText("Please keep it short")
                 .build();
         when(toneSettingRepository.findByUserId(20L)).thenReturn(Optional.of(englishCustom));

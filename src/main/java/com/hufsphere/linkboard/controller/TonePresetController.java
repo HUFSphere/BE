@@ -33,7 +33,7 @@ public class TonePresetController {
 
     @Operation(
             summary = "톤 프리셋 목록 조회",
-            description = "lang이 없으면 요청자의 모국어 기준 프리셋 3개를 즉시 반환한다(AI 서버 호출 없음). lang을 지정하면 로그인 없이도 조회할 수 있다."
+            description = "lang이 없으면 요청자의 모국어 기준 프리셋 3개를 즉시 반환한다(AI 서버 호출 없음). lang을 지정하면 로그인 없이도 조회할 수 있다. 한국어(ko)/영어(en)만 지원하며, 그 외 언어는 영어로 대체된다(다른 UI 요소와 동일한 언어 범위)."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -46,16 +46,16 @@ public class TonePresetController {
                               "message": "톤 프리셋 조회 성공",
                               "data": [
                                 {
-                                  "presetKey": "beginner",
-                                  "label": "이 팀이 처음이에요"
+                                  "presetKey": "concise",
+                                  "label": "간결하게"
                                 },
                                 {
-                                  "presetKey": "intermediate",
-                                  "label": "어느 정도 알아요"
+                                  "presetKey": "detailed",
+                                  "label": "자세하게"
                                 },
                                 {
-                                  "presetKey": "expert",
-                                  "label": "숙련자예요"
+                                  "presetKey": "friendly",
+                                  "label": "친근하게"
                                 }
                               ]
                             }"""))),

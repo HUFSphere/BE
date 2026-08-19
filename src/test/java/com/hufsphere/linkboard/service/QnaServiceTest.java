@@ -74,55 +74,50 @@ class QnaServiceTest {
     }
 
     @Test
-    void beginner_톤과_expert_톤은_서로_다른_상세도의_지시문이_AI_서버로_전달된다() {
+    void detailed_톤과_concise_톤은_서로_다른_지시문이_AI_서버로_전달된다() {
         when(workspaceRepository.existsById(1L)).thenReturn(true);
         when(aiServerClient.ask(any(), any(), any(), any())).thenReturn(askResponseOf("답변"));
 
         QnaRequest request = requestOf("왜 JWT를 썼어요?", "ko");
 
         when(toneSettingRepository.findByUserId(10L))
-                .thenReturn(Optional.of(toneSettingOf(List.of("beginner"))));
+                .thenReturn(Optional.of(toneSettingOf(List.of("detailed"))));
         qnaService.ask(1L, 10L, request);
 
         when(toneSettingRepository.findByUserId(20L))
-                .thenReturn(Optional.of(toneSettingOf(List.of("expert"))));
+                .thenReturn(Optional.of(toneSettingOf(List.of("concise"))));
         qnaService.ask(1L, 20L, request);
 
         ArgumentCaptor<String> toneCaptor = ArgumentCaptor.forClass(String.class);
         verify(aiServerClient, times(2)).ask(eq("왜 JWT를 썼어요?"), eq("ko"), toneCaptor.capture(), eq(List.of()));
 
-        String beginnerTone = toneCaptor.getAllValues().get(0);
-        String expertTone = toneCaptor.getAllValues().get(1);
+        String detailedTone = toneCaptor.getAllValues().get(0);
+        String conciseTone = toneCaptor.getAllValues().get(1);
 
-        assertThat(beginnerTone).isNotEqualTo(expertTone);
-        assertThat(beginnerTone).contains("자세히 설명해주세요");
-        assertThat(expertTone).contains("간결하게");
-        assertThat(beginnerTone.length()).isGreaterThan(expertTone.length());
+        assertThat(detailedTone).isNotEqualTo(conciseTone);
+        assertThat(detailedTone).contains("자세히 설명해주세요");
+        assertThat(conciseTone).contains("간결하게");
     }
 
     @Test
-    void 저장된_톤_설정이_없으면_기본값_beginner_톤이_전달된다() {
+    void 저장된_톤_설정이_없으면_프리셋_미적용_빈_톤이_전달된다() {
         when(workspaceRepository.existsById(1L)).thenReturn(true);
         when(toneSettingRepository.findByUserId(99L)).thenReturn(Optional.empty());
         when(aiServerClient.ask(any(), any(), any(), any())).thenReturn(askResponseOf("답변"));
 
         qnaService.ask(1L, 99L, requestOf("질문", "ko"));
 
-        verify(aiServerClient).ask(eq("질문"), eq("ko"), eq(
-                "저는 새로 합류한 주니어입니다. 기술 결정의 이유와 배경을 자세히 설명해주세요. 팀의 관행이나 암묵적 규칙도 함께 알려주시면 좋겠습니다."
-        ), eq(List.of()));
+        verify(aiServerClient).ask(eq("질문"), eq("ko"), eq(""), eq(List.of()));
     }
 
     @Test
-    void 로그인하지_않은_요청도_기본_톤으로_처리된다() {
+    void 로그인하지_않은_요청도_빈_톤으로_처리된다() {
         when(workspaceRepository.existsById(1L)).thenReturn(true);
         when(aiServerClient.ask(any(), any(), any(), any())).thenReturn(askResponseOf("답변"));
 
         qnaService.ask(1L, null, requestOf("질문", "en"));
 
-        verify(aiServerClient).ask(eq("질문"), eq("en"), eq(
-                "I'm a junior developer who just joined. Please explain technical decisions in detail with context and background. Include any team conventions or implicit rules."
-        ), eq(List.of()));
+        verify(aiServerClient).ask(eq("질문"), eq("en"), eq(""), eq(List.of()));
     }
 
     @Test
@@ -131,7 +126,7 @@ class QnaServiceTest {
         when(toneSettingRepository.findByUserId(10L))
                 .thenReturn(Optional.of(ToneSetting.builder()
                         .userId(10L)
-                        .presetKeys(List.of("beginner"))
+                        .presetKeys(List.of("detailed"))
                         .customText("특히 Spring 관련 결정은 더 자세히 설명해주세요")
                         .build()));
         when(aiServerClient.ask(any(), any(), any(), any())).thenReturn(askResponseOf("답변"));
@@ -139,24 +134,37 @@ class QnaServiceTest {
         qnaService.ask(1L, 10L, requestOf("질문", "ko"));
 
         verify(aiServerClient).ask(eq("질문"), eq("ko"), eq(
-                "저는 새로 합류한 주니어입니다. 기술 결정의 이유와 배경을 자세히 설명해주세요. "
-                        + "팀의 관행이나 암묵적 규칙도 함께 알려주시면 좋겠습니다. 특히 Spring 관련 결정은 더 자세히 설명해주세요"
+                "배경과 이유를 자세히 설명해주세요. 특히 Spring 관련 결정은 더 자세히 설명해주세요"
         ), eq(List.of()));
+    }
+
+    @Test
+    void 프리셋_없이_customText만으로도_톤이_적용된다() {
+        when(workspaceRepository.existsById(1L)).thenReturn(true);
+        when(toneSettingRepository.findByUserId(10L))
+                .thenReturn(Optional.of(ToneSetting.builder()
+                        .userId(10L)
+                        .presetKeys(List.of())
+                        .customText("이모지 많이 써주세요")
+                        .build()));
+        when(aiServerClient.ask(any(), any(), any(), any())).thenReturn(askResponseOf("답변"));
+
+        qnaService.ask(1L, 10L, requestOf("질문", "ko"));
+
+        verify(aiServerClient).ask(eq("질문"), eq("ko"), eq("이모지 많이 써주세요"), eq(List.of()));
     }
 
     @Test
     void 프리셋을_여러_개_선택하면_각_프리셋_설명이_모두_톤에_포함된다() {
         when(workspaceRepository.existsById(1L)).thenReturn(true);
         when(toneSettingRepository.findByUserId(10L))
-                .thenReturn(Optional.of(toneSettingOf(List.of("beginner", "expert"))));
+                .thenReturn(Optional.of(toneSettingOf(List.of("detailed", "friendly"))));
         when(aiServerClient.ask(any(), any(), any(), any())).thenReturn(askResponseOf("답변"));
 
         qnaService.ask(1L, 10L, requestOf("질문", "ko"));
 
         verify(aiServerClient).ask(eq("질문"), eq("ko"), eq(
-                "저는 새로 합류한 주니어입니다. 기술 결정의 이유와 배경을 자세히 설명해주세요. "
-                        + "팀의 관행이나 암묵적 규칙도 함께 알려주시면 좋겠습니다. "
-                        + "경험 많은 개발자입니다. 이 팀만의 특수한 결정과 주의점만 간결하게 알려주세요."
+                "배경과 이유를 자세히 설명해주세요. 친근하고 편안한 말투로 답변해주세요."
         ), eq(List.of()));
     }
 
@@ -181,7 +189,7 @@ class QnaServiceTest {
         when(toneSettingRepository.findByUserId(10L))
                 .thenReturn(Optional.of(ToneSetting.builder()
                         .userId(10L)
-                        .presetKeys(List.of("beginner"))
+                        .presetKeys(List.of("detailed"))
                         .customText("أرجو أن تجيب باللغة العربية فقط من فضلك")
                         .build()));
         when(aiServerClient.ask(any(), any(), any(), any())).thenReturn(askResponseOf("답변"));
