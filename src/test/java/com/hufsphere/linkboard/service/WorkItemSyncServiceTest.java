@@ -104,7 +104,7 @@ class WorkItemSyncServiceTest {
         groupFeaturesResponse.setFeatures(List.of(groupedFeature));
         when(aiServerClient.groupFeatures("ko")).thenReturn(groupFeaturesResponse);
 
-        workItemSyncService.replaceForWorkspace(workspace, List.of(item0, item1), List.of(), "ko", Map.of(), Map.of());
+        workItemSyncService.replaceForWorkspace(workspace, List.of(item0, item1), List.of(), "ko", SourceType.GITHUB, Map.of(), Map.of());
 
         verify(workItemLinkRepository).deleteByWorkspaceId(1L);
         verify(workItemRepository).deleteByWorkspaceId(1L);
@@ -143,7 +143,7 @@ class WorkItemSyncServiceTest {
         emptyResponse.setFeatures(List.of());
         when(aiServerClient.groupFeatures("ko")).thenReturn(emptyResponse);
 
-        workItemSyncService.replaceForWorkspace(workspace, List.of(item0), List.of(), "ko", Map.of(), Map.of());
+        workItemSyncService.replaceForWorkspace(workspace, List.of(item0), List.of(), "ko", SourceType.GITHUB, Map.of(), Map.of());
 
         verify(featureRepository).deleteByWorkspaceId(1L);
         verify(featureRepository, org.mockito.Mockito.never()).save(any(Feature.class));
@@ -199,7 +199,8 @@ class WorkItemSyncServiceTest {
         );
 
         workItemSyncService.replaceForWorkspace(
-                workspace, List.of(partiallyChecked, noneChecked, fullyChecked, noSignal), List.of(), "ko", Map.of(), notionCompletionByUrl);
+                workspace, List.of(partiallyChecked, noneChecked, fullyChecked, noSignal), List.of(), "ko",
+                SourceType.NOTION, Map.of(), notionCompletionByUrl);
 
         ArgumentCaptor<WorkItem> savedItems = ArgumentCaptor.forClass(WorkItem.class);
         verify(workItemRepository, atLeast(4)).save(savedItems.capture());
@@ -220,5 +221,62 @@ class WorkItemSyncServiceTest {
         WorkItem noChecklist = distinctSavedItems.stream().filter(i -> "체크리스트 없는 페이지".equals(i.getTitle())).findFirst().orElseThrow();
         assertThat(noChecklist.getCompletionRate()).isNull();
         assertThat(noChecklist.getStatus()).isEqualTo("blocked");
+    }
+
+    @Test
+    void 이번에_재크롤링하지_않은_소스는_AI_재추측_대신_기존_status를_그대로_이어간다() {
+        SourceConnection figmaConnection = SourceConnection.builder()
+                .workspace(workspace)
+                .sourceType(SourceType.FIGMA)
+                .build();
+        figmaConnection.setId(30L);
+        when(sourceConnectionRepository.findByWorkspaceId(1L)).thenReturn(List.of(githubConnection, figmaConnection));
+
+        // Figma는 예전에 ✅ 체크마크로 done이 확정되어 저장돼 있던 상태(스냅샷)
+        WorkItem previousFigmaItem = WorkItem.builder()
+                .workspace(workspace)
+                .sourceConnection(figmaConnection)
+                .sourceType(SourceType.FIGMA)
+                .itemType("design")
+                .title("대시보드 페이지")
+                .status("done")
+                .sourceUrl("https://figma.com/dashboard")
+                .build();
+        when(workItemRepository.findByWorkspaceIdOrderBySourceUpdatedAtDesc(1L)).thenReturn(List.of(previousFigmaItem));
+
+        when(workItemRepository.save(any(WorkItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        GroupFeaturesResponse emptyResponse = new GroupFeaturesResponse();
+        emptyResponse.setFeatures(List.of());
+        when(aiServerClient.groupFeatures("ko")).thenReturn(emptyResponse);
+
+        // 이번엔 GitHub만 동기화하는 중 -> Figma는 재크롤링 안 됐으니 figmaDoneByUrl이 비어있고,
+        // AI는 (오래된 내용을 다시 보고) todo로 잘못 재추측함
+        WorkItemDto staleFigmaGuess = new WorkItemDto();
+        staleFigmaGuess.setSourceType("figma");
+        staleFigmaGuess.setItemType("design");
+        staleFigmaGuess.setTitle("대시보드 페이지");
+        staleFigmaGuess.setStatus("todo");
+        staleFigmaGuess.setUrl("https://figma.com/dashboard");
+
+        WorkItemDto newFigmaItem = new WorkItemDto();
+        newFigmaItem.setSourceType("figma");
+        newFigmaItem.setItemType("design");
+        newFigmaItem.setTitle("처음 보는 프레임");
+        newFigmaItem.setStatus("todo");
+        newFigmaItem.setUrl("https://figma.com/new-frame");
+
+        workItemSyncService.replaceForWorkspace(
+                workspace, List.of(staleFigmaGuess, newFigmaItem), List.of(), "ko", SourceType.GITHUB, Map.of(), Map.of());
+
+        ArgumentCaptor<WorkItem> savedItems = ArgumentCaptor.forClass(WorkItem.class);
+        verify(workItemRepository, atLeast(2)).save(savedItems.capture());
+        List<WorkItem> distinctSavedItems = savedItems.getAllValues().stream().distinct().toList();
+
+        WorkItem carriedOver = distinctSavedItems.stream().filter(i -> "대시보드 페이지".equals(i.getTitle())).findFirst().orElseThrow();
+        assertThat(carriedOver.getStatus()).isEqualTo("done"); // AI의 todo 재추측이 아니라 기존 값 유지
+
+        WorkItem brandNew = distinctSavedItems.stream().filter(i -> "처음 보는 프레임".equals(i.getTitle())).findFirst().orElseThrow();
+        assertThat(brandNew.getStatus()).isEqualTo("todo"); // 기존 기록이 없으니 AI 추측을 그대로 씀
     }
 }

@@ -173,7 +173,7 @@ public class SourceSyncService {
 
         workItemSyncService.replaceForWorkspace(
                 sourceConnection.getWorkspace(), extracted.getWorkItems(), linked.getLinks(), lang,
-                figmaDoneByUrl, signals.notionCompletionByUrl());
+                sourceConnection.getSourceType(), figmaDoneByUrl, signals.notionCompletionByUrl());
     }
 
     private String resolveLang(SourceConnection sourceConnection) {
