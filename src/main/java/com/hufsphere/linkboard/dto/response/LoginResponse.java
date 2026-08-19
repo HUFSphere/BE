@@ -14,8 +14,8 @@ public class LoginResponse {
     @Schema(description = "사용자 ID", example = "1")
     private final Long userId;
 
-    @Schema(description = "로그인 아이디", example = "jaeyoung123")
-    private final String username;
+    @Schema(description = "로그인 이메일", example = "jaeyoung123@hufs.ac.kr")
+    private final String email;
 
     @Schema(description = "이름", example = "박재영")
     private final String name;
@@ -30,6 +30,6 @@ public class LoginResponse {
     private final String refreshToken;
 
     public static LoginResponse of(AppUser user, String accessToken, String refreshToken) {
-        return new LoginResponse(user.getId(), user.getUsername(), user.getName(), user.getNativeLang(), accessToken, refreshToken);
+        return new LoginResponse(user.getId(), user.getEmail(), user.getName(), user.getNativeLang(), accessToken, refreshToken);
     }
 }

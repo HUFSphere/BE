@@ -59,7 +59,7 @@ public class AuthController {
 
     @Operation(
             summary = "일반 회원가입",
-            description = "아이디/비밀번호/이름으로 회원가입한다."
+            description = "이메일/비밀번호/이름으로 회원가입한다. 이메일이 로그인 아이디로 사용된다."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -74,7 +74,7 @@ public class AuthController {
                                       "message": "회원가입이 완료되었습니다",
                                       "data": {
                                         "userId": 1,
-                                        "username": "jaeyoung123",
+                                        "email": "jaeyoung123@hufs.ac.kr",
                                         "name": "박재영",
                                         "nativeLang": "ko",
                                         "createdAt": "2026-08-18T10:00:00"
@@ -99,7 +99,7 @@ public class AuthController {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "409",
-                    description = "아이디 중복",
+                    description = "이메일 중복",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(value = """
@@ -107,7 +107,7 @@ public class AuthController {
                                       "timestamp": "2026-08-18T10:00:00.000+00:00",
                                       "status": 409,
                                       "error": "Conflict",
-                                      "message": "이미 사용 중인 아이디입니다",
+                                      "message": "이미 사용 중인 이메일입니다",
                                       "path": "/api/v1/auth/signup"
                                     }""")
                     )
@@ -130,7 +130,7 @@ public class AuthController {
 
     @Operation(
             summary = "일반 로그인",
-            description = "아이디/비밀번호로 로그인하고 액세스/리프레시 토큰을 발급한다."
+            description = "이메일/비밀번호로 로그인하고 액세스/리프레시 토큰을 발급한다."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -145,7 +145,7 @@ public class AuthController {
                                       "message": "로그인되었습니다",
                                       "data": {
                                         "userId": 1,
-                                        "username": "jaeyoung123",
+                                        "email": "jaeyoung123@hufs.ac.kr",
                                         "name": "박재영",
                                         "nativeLang": "ko",
                                         "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -164,7 +164,7 @@ public class AuthController {
                                       "timestamp": "2026-08-18T10:00:00.000+00:00",
                                       "status": 400,
                                       "error": "Bad Request",
-                                      "message": "username과 password는 필수입니다",
+                                      "message": "email과 password는 필수입니다",
                                       "path": "/api/v1/auth/login"
                                     }""")
                     )
@@ -179,7 +179,7 @@ public class AuthController {
                                       "timestamp": "2026-08-18T10:00:00.000+00:00",
                                       "status": 401,
                                       "error": "Unauthorized",
-                                      "message": "아이디 또는 비밀번호가 올바르지 않습니다",
+                                      "message": "이메일 또는 비밀번호가 올바르지 않습니다",
                                       "path": "/api/v1/auth/login"
                                     }""")
                     )

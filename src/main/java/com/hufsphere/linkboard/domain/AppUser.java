@@ -14,7 +14,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// 일반 회원가입(username+password, 1.6/1.7)과 소셜 로그인(oauthProvider+oauthSubject, 1.0/1.1)
+// 일반 회원가입(email+password, 1.6/1.7)과 소셜 로그인(oauthProvider+oauthSubject, 1.0/1.1)
 // 두 가입 경로를 하나의 계정 테이블로 수용한다. 각 경로 전용 컬럼은 반대쪽 경로로 만든
 // 계정에서는 비어있을 수 있어 nullable로 둔다.
 
@@ -32,8 +32,8 @@ public class AppUser {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, length = 20)
-    private String username;
+    @Column(unique = true, length = 100)
+    private String email;
 
     @Column(length = 100)
     private String password;
@@ -55,14 +55,14 @@ public class AppUser {
 
     @Builder
     private AppUser(
-            String username,
+            String email,
             String password,
             String name,
             String nativeLang,
             String oauthProvider,
             String oauthSubject
     ) {
-        this.username = username;
+        this.email = email;
         this.password = password;
         this.name = name;
         this.nativeLang =
