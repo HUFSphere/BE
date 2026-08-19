@@ -1,8 +1,10 @@
 package com.hufsphere.linkboard.client;
 
+import com.hufsphere.linkboard.client.dto.GithubRepoItem;
 import com.hufsphere.linkboard.client.dto.GithubTokenExchangeResponse;
 import com.hufsphere.linkboard.client.dto.GithubUserResponse;
 import com.hufsphere.linkboard.exception.GithubOAuthFailedException;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +24,8 @@ public class GithubOAuthClient {
 
     private static final String TOKEN_URL = "https://github.com/login/oauth/access_token";
     private static final String USER_URL = "https://api.github.com/user";
+    private static final String REPOS_URL =
+            "https://api.github.com/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator,organization_member";
 
     private final RestClient githubRestClient;
 
@@ -65,6 +69,20 @@ public class GithubOAuthClient {
         } catch (RestClientException e) {
             logGithubError("사용자 정보 조회", e);
             throw new GithubOAuthFailedException("GitHub 사용자 정보 조회에 실패했습니다");
+        }
+    }
+
+    public List<GithubRepoItem> listRepos(String accessToken) {
+        try {
+            GithubRepoItem[] repos = githubRestClient.get()
+                    .uri(REPOS_URL)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .body(GithubRepoItem[].class);
+            return repos != null ? List.of(repos) : List.of();
+        } catch (RestClientException e) {
+            logGithubError("레포지토리 목록 조회", e);
+            throw new GithubOAuthFailedException("GitHub 레포지토리 목록 조회에 실패했습니다");
         }
     }
 

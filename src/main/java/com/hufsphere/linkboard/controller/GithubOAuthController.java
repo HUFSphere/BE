@@ -3,6 +3,7 @@ package com.hufsphere.linkboard.controller;
 import com.hufsphere.linkboard.common.ApiResponse;
 import com.hufsphere.linkboard.common.ErrorResponse;
 import com.hufsphere.linkboard.dto.response.GithubOAuthConnectionResponse;
+import com.hufsphere.linkboard.dto.response.GithubRepoResponse;
 import com.hufsphere.linkboard.service.GithubOAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URI;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -116,5 +118,62 @@ public class GithubOAuthController {
         Long workspaceId = Long.parseLong(state.substring(STATE_PREFIX.length()));
         GithubOAuthConnectionResponse response = githubOAuthService.connect(workspaceId, code);
         return ResponseEntity.ok(ApiResponse.success("GITHUB_CONNECTED", "GitHub가 연결되었습니다", response));
+    }
+
+    // TODO: 인증 도입 후 workspaceId에 대한 사용자 접근 권한 검증 추가
+    @Operation(
+            summary = "GitHub 레포지토리 목록 조회",
+            description = "연결된 GitHub 계정이 접근 가능한 레포지토리 목록을 조회한다. 여기서 고른 fullName을 "
+                    + "POST /api/v1/workspaces/{workspaceId}/source-connections 의 targetRepoOrBoard로 그대로 보내면 된다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "레포지토리 목록 조회 성공",
+                    content = @Content(examples = @ExampleObject(value = """
+                            {
+                              "success": true,
+                              "code": "GITHUB_REPOS_OK",
+                              "message": "GitHub 레포지토리 목록 조회 성공",
+                              "data": [
+                                {
+                                  "fullName": "HUFSphere/BE",
+                                  "privateRepo": false,
+                                  "defaultBranch": "main"
+                                }
+                              ]
+                            }"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "이 워크스페이스에 GitHub가 연결되어 있지 않음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-08-19T10:00:00",
+                                      "status": 400,
+                                      "error": "Bad Request",
+                                      "message": "먼저 GitHub를 연결해주세요",
+                                      "path": "/api/v1/auth/github/repos"
+                                    }"""))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "502",
+                    description = "GitHub 레포지토리 목록 조회 실패",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "timestamp": "2026-08-19T10:00:00",
+                                      "status": 502,
+                                      "error": "Bad Gateway",
+                                      "message": "GitHub 레포지토리 목록 조회에 실패했습니다",
+                                      "path": "/api/v1/auth/github/repos"
+                                    }"""))),
+    })
+    @GetMapping("/repos")
+    public ResponseEntity<ApiResponse<List<GithubRepoResponse>>> listRepos(
+            @Parameter(description = "GitHub가 연결된 워크스페이스 ID", example = "1")
+            @RequestParam Long workspaceId
+    ) {
+        List<GithubRepoResponse> response = githubOAuthService.listRepos(workspaceId);
+        return ResponseEntity.ok(ApiResponse.success("GITHUB_REPOS_OK", "GitHub 레포지토리 목록 조회 성공", response));
     }
 }
