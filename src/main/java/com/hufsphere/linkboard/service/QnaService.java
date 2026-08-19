@@ -34,7 +34,7 @@ public class QnaService {
             throw new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다");
         }
 
-        String tone = toneSettingService.resolveToneText(workspaceId, requesterId, request.getLang());
+        String tone = toneSettingService.resolveToneText(requesterId, request.getLang());
 
         Map<Long, TeamNorm> teamNormsById = teamNormRepository.findByWorkspaceIdOrderByIdAsc(workspaceId).stream()
                 .collect(Collectors.toMap(TeamNorm::getId, Function.identity()));

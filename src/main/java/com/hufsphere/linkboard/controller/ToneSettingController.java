@@ -18,16 +18,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "ToneSetting", description = "워크스페이스별 사용자 톤 설정 API")
+@Tag(name = "ToneSetting", description = "사용자별 톤 설정 API")
 @RestController
-@RequestMapping("/api/v1/workspaces/{workspaceId}/tone-setting")
+@RequestMapping("/api/v1/tone-setting")
 @RequiredArgsConstructor
 public class ToneSettingController {
 
@@ -36,7 +35,7 @@ public class ToneSettingController {
 
     @Operation(
             summary = "톤 설정 조회",
-            description = "요청자가 이 워크스페이스에 저장한 톤 설정을 조회한다. 저장된 설정이 없으면 기본값(presetKeys: [\"beginner\"], customText null)을 에러 없이 반환한다."
+            description = "요청자가 저장한 톤 설정을 조회한다(워크스페이스와 무관하게 사용자 개인 단위). 저장된 설정이 없으면 기본값(presetKeys: [\"beginner\"], customText null)을 에러 없이 반환한다."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -54,48 +53,34 @@ public class ToneSettingController {
                               }
                             }"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "403",
-                    description = "이 워크스페이스의 멤버가 아님",
+                    responseCode = "401",
+                    description = "로그인이 필요함",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(value = """
                                     {
                                       "timestamp": "2026-08-19T10:00:00",
-                                      "status": 403,
-                                      "error": "Forbidden",
-                                      "message": "이 워크스페이스에 접근 권한이 없습니다",
-                                      "path": "/api/v1/workspaces/1/tone-setting"
-                                    }"""))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "404",
-                    description = "워크스페이스를 찾을 수 없음",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "timestamp": "2026-08-19T10:00:00",
-                                      "status": 404,
-                                      "error": "Not Found",
-                                      "message": "워크스페이스를 찾을 수 없습니다",
-                                      "path": "/api/v1/workspaces/1/tone-setting"
+                                      "status": 401,
+                                      "error": "Unauthorized",
+                                      "message": "로그인이 필요합니다",
+                                      "path": "/api/v1/tone-setting"
                                     }"""))),
     })
     @GetMapping
     public ResponseEntity<ApiResponse<ToneSettingResponse>> getToneSetting(
-            @PathVariable Long workspaceId,
-
             @Parameter(description = "Bearer Access Token", required = true, example = "Bearer eyJ...")
             @RequestHeader(value = "Authorization", required = false)
             String authorization
     ) {
         Long userId = extractUserId(authorization);
 
-        ToneSettingResponse response = toneSettingService.getToneSetting(workspaceId, userId);
+        ToneSettingResponse response = toneSettingService.getToneSetting(userId);
 
         return ResponseEntity.ok(ApiResponse.success("TONE_SETTING_OK", "톤 설정 조회 성공", response));
     }
 
     @Operation(
             summary = "톤 설정 저장",
-            description = "요청자의 톤 설정을 저장한다. presetKeys는 beginner/intermediate/expert 중 하나 이상 중복 선택할 수 있다. 기존 설정이 있으면 갱신한다(upsert)."
+            description = "요청자의 톤 설정을 저장한다(워크스페이스와 무관하게 사용자 개인 단위). presetKeys는 beginner/intermediate/expert 중 하나 이상 중복 선택할 수 있다. 기존 설정이 있으면 갱신한다(upsert)."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -122,37 +107,23 @@ public class ToneSettingController {
                                       "status": 400,
                                       "error": "Bad Request",
                                       "message": "presetKeys는 beginner/intermediate/expert로만 구성되어야 합니다",
-                                      "path": "/api/v1/workspaces/1/tone-setting"
+                                      "path": "/api/v1/tone-setting"
                                     }"""))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "403",
-                    description = "이 워크스페이스의 멤버가 아님",
+                    responseCode = "401",
+                    description = "로그인이 필요함",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(value = """
                                     {
                                       "timestamp": "2026-08-19T10:00:00",
-                                      "status": 403,
-                                      "error": "Forbidden",
-                                      "message": "이 워크스페이스에 접근 권한이 없습니다",
-                                      "path": "/api/v1/workspaces/1/tone-setting"
-                                    }"""))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "404",
-                    description = "워크스페이스를 찾을 수 없음",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "timestamp": "2026-08-19T10:00:00",
-                                      "status": 404,
-                                      "error": "Not Found",
-                                      "message": "워크스페이스를 찾을 수 없습니다",
-                                      "path": "/api/v1/workspaces/1/tone-setting"
+                                      "status": 401,
+                                      "error": "Unauthorized",
+                                      "message": "로그인이 필요합니다",
+                                      "path": "/api/v1/tone-setting"
                                     }"""))),
     })
     @PutMapping
     public ResponseEntity<ApiResponse<ToneSettingResponse>> saveToneSetting(
-            @PathVariable Long workspaceId,
-
             @Parameter(description = "Bearer Access Token", required = true, example = "Bearer eyJ...")
             @RequestHeader(value = "Authorization", required = false)
             String authorization,
@@ -161,7 +132,7 @@ public class ToneSettingController {
     ) {
         Long userId = extractUserId(authorization);
 
-        ToneSettingResponse response = toneSettingService.saveToneSetting(workspaceId, userId, request);
+        ToneSettingResponse response = toneSettingService.saveToneSetting(userId, request);
 
         return ResponseEntity.ok(ApiResponse.success("TONE_SETTING_SAVED", "톤 설정 저장 성공", response));
     }

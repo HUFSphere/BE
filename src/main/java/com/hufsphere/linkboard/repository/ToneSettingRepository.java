@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ToneSettingRepository extends JpaRepository<ToneSetting, Long> {
 
-    Optional<ToneSetting> findByWorkspaceIdAndUserId(Long workspaceId, Long userId);
+    Optional<ToneSetting> findByUserId(Long userId);
 }

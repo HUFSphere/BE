@@ -15,7 +15,6 @@ import com.hufsphere.linkboard.repository.AppUserRepository;
 import com.hufsphere.linkboard.repository.TeamNormRepository;
 import com.hufsphere.linkboard.repository.ToneSettingRepository;
 import com.hufsphere.linkboard.repository.WorkItemRepository;
-import com.hufsphere.linkboard.repository.WorkspaceMemberRepository;
 import com.hufsphere.linkboard.repository.WorkspaceRepository;
 import java.util.List;
 import java.util.Optional;
@@ -41,23 +40,18 @@ class QnaServiceTest {
     @Mock
     private ToneSettingRepository toneSettingRepository;
     @Mock
-    private WorkspaceMemberRepository workspaceMemberRepository;
-    @Mock
     private AppUserRepository appUserRepository;
 
     private QnaService qnaService;
 
     @BeforeEach
     void setUp() {
-        ToneSettingService toneSettingService = new ToneSettingService(
-                toneSettingRepository, workspaceRepository, workspaceMemberRepository, appUserRepository
-        );
+        ToneSettingService toneSettingService = new ToneSettingService(toneSettingRepository, appUserRepository);
         qnaService = new QnaService(workspaceRepository, workItemRepository, teamNormRepository, aiServerClient, toneSettingService);
     }
 
     private static ToneSetting toneSettingOf(List<String> presetKeys) {
         return ToneSetting.builder()
-                .workspaceId(1L)
                 .userId(1L)
                 .presetKeys(presetKeys)
                 .build();
@@ -86,11 +80,11 @@ class QnaServiceTest {
 
         QnaRequest request = requestOf("왜 JWT를 썼어요?", "ko");
 
-        when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 10L))
+        when(toneSettingRepository.findByUserId(10L))
                 .thenReturn(Optional.of(toneSettingOf(List.of("beginner"))));
         qnaService.ask(1L, 10L, request);
 
-        when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 20L))
+        when(toneSettingRepository.findByUserId(20L))
                 .thenReturn(Optional.of(toneSettingOf(List.of("expert"))));
         qnaService.ask(1L, 20L, request);
 
@@ -109,7 +103,7 @@ class QnaServiceTest {
     @Test
     void 저장된_톤_설정이_없으면_기본값_beginner_톤이_전달된다() {
         when(workspaceRepository.existsById(1L)).thenReturn(true);
-        when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 99L)).thenReturn(Optional.empty());
+        when(toneSettingRepository.findByUserId(99L)).thenReturn(Optional.empty());
         when(aiServerClient.ask(any(), any(), any(), any())).thenReturn(askResponseOf("답변"));
 
         qnaService.ask(1L, 99L, requestOf("질문", "ko"));
@@ -134,9 +128,8 @@ class QnaServiceTest {
     @Test
     void 커스텀_텍스트는_프리셋_설명_뒤에_덧붙여진다() {
         when(workspaceRepository.existsById(1L)).thenReturn(true);
-        when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 10L))
+        when(toneSettingRepository.findByUserId(10L))
                 .thenReturn(Optional.of(ToneSetting.builder()
-                        .workspaceId(1L)
                         .userId(10L)
                         .presetKeys(List.of("beginner"))
                         .customText("특히 Spring 관련 결정은 더 자세히 설명해주세요")
@@ -154,7 +147,7 @@ class QnaServiceTest {
     @Test
     void 프리셋을_여러_개_선택하면_각_프리셋_설명이_모두_톤에_포함된다() {
         when(workspaceRepository.existsById(1L)).thenReturn(true);
-        when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 10L))
+        when(toneSettingRepository.findByUserId(10L))
                 .thenReturn(Optional.of(toneSettingOf(List.of("beginner", "expert"))));
         when(aiServerClient.ask(any(), any(), any(), any())).thenReturn(askResponseOf("답변"));
 

@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "tone_setting", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_tone_setting_workspace_user", columnNames = {"workspace_id", "user_id"})
+        @UniqueConstraint(name = "uk_tone_setting_user", columnNames = {"user_id"})
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -31,9 +31,6 @@ public class ToneSetting {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(name = "workspace_id", nullable = false)
-    private Long workspaceId;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
@@ -53,8 +50,7 @@ public class ToneSetting {
     private LocalDateTime updatedAt;
 
     @Builder
-    private ToneSetting(Long workspaceId, Long userId, List<String> presetKeys, String customText) {
-        this.workspaceId = workspaceId;
+    private ToneSetting(Long userId, List<String> presetKeys, String customText) {
         this.userId = userId;
         this.presetKeys = (presetKeys != null && !presetKeys.isEmpty()) ? presetKeys : List.of(DEFAULT_PRESET_KEY);
         this.customText = customText;

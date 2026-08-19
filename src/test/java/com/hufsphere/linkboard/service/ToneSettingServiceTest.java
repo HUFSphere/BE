@@ -11,12 +11,8 @@ import com.hufsphere.linkboard.dto.request.ToneSettingRequest;
 import com.hufsphere.linkboard.dto.response.ToneSettingResponse;
 import com.hufsphere.linkboard.dto.response.TonePresetResponse;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
-import com.hufsphere.linkboard.exception.WorkspaceAccessDeniedException;
-import com.hufsphere.linkboard.exception.WorkspaceNotFoundException;
 import com.hufsphere.linkboard.repository.AppUserRepository;
 import com.hufsphere.linkboard.repository.ToneSettingRepository;
-import com.hufsphere.linkboard.repository.WorkspaceMemberRepository;
-import com.hufsphere.linkboard.repository.WorkspaceRepository;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -31,10 +27,6 @@ class ToneSettingServiceTest {
 
     @Mock
     private ToneSettingRepository toneSettingRepository;
-    @Mock
-    private WorkspaceRepository workspaceRepository;
-    @Mock
-    private WorkspaceMemberRepository workspaceMemberRepository;
     @Mock
     private AppUserRepository appUserRepository;
 
@@ -81,11 +73,9 @@ class ToneSettingServiceTest {
 
     @Test
     void 톤_설정이_없으면_기본값을_에러없이_반환한다() {
-        when(workspaceRepository.existsById(1L)).thenReturn(true);
-        when(workspaceMemberRepository.existsByWorkspaceIdAndUserId(1L, 10L)).thenReturn(true);
-        when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 10L)).thenReturn(Optional.empty());
+        when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.empty());
 
-        ToneSettingResponse response = toneSettingService.getToneSetting(1L, 10L);
+        ToneSettingResponse response = toneSettingService.getToneSetting(10L);
 
         assertThat(response.getPresetKeys()).containsExactly("beginner");
         assertThat(response.getCustomText()).isNull();
@@ -93,32 +83,26 @@ class ToneSettingServiceTest {
     }
 
     @Test
-    void 워크스페이스_멤버가_아니면_톤_설정_조회시_예외를_던진다() {
-        when(workspaceRepository.existsById(1L)).thenReturn(true);
-        when(workspaceMemberRepository.existsByWorkspaceIdAndUserId(1L, 10L)).thenReturn(false);
+    void 톤_설정은_워크스페이스와_무관하게_사용자_단위로_조회된다() {
+        ToneSetting existing = ToneSetting.builder()
+                .userId(10L)
+                .presetKeys(List.of("expert"))
+                .build();
+        when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> toneSettingService.getToneSetting(1L, 10L))
-                .isInstanceOf(WorkspaceAccessDeniedException.class);
-    }
+        ToneSettingResponse response = toneSettingService.getToneSetting(10L);
 
-    @Test
-    void 워크스페이스가_없으면_톤_설정_조회시_예외를_던진다() {
-        when(workspaceRepository.existsById(1L)).thenReturn(false);
-
-        assertThatThrownBy(() -> toneSettingService.getToneSetting(1L, 10L))
-                .isInstanceOf(WorkspaceNotFoundException.class);
+        assertThat(response.getPresetKeys()).containsExactly("expert");
     }
 
     @Test
     void 프리셋을_여러_개_중복_선택해_저장할_수_있다() {
-        when(workspaceRepository.existsById(1L)).thenReturn(true);
-        when(workspaceMemberRepository.existsByWorkspaceIdAndUserId(1L, 10L)).thenReturn(true);
-        when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 10L)).thenReturn(Optional.empty());
+        when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.empty());
         when(toneSettingRepository.save(any(ToneSetting.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         ToneSettingResponse response = toneSettingService.saveToneSetting(
-                1L, 10L, requestOf(List.of("beginner", "expert"), "Spring 결정은 더 자세히 설명해주세요"));
+                10L, requestOf(List.of("beginner", "expert"), "Spring 결정은 더 자세히 설명해주세요"));
 
         assertThat(response.getPresetKeys()).containsExactly("beginner", "expert");
         assertThat(response.getCustomText()).isEqualTo("Spring 결정은 더 자세히 설명해주세요");
@@ -126,34 +110,28 @@ class ToneSettingServiceTest {
 
     @Test
     void 중복된_presetKey는_저장시_하나로_합쳐진다() {
-        when(workspaceRepository.existsById(1L)).thenReturn(true);
-        when(workspaceMemberRepository.existsByWorkspaceIdAndUserId(1L, 10L)).thenReturn(true);
-        when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 10L)).thenReturn(Optional.empty());
+        when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.empty());
         when(toneSettingRepository.save(any(ToneSetting.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         ToneSettingResponse response = toneSettingService.saveToneSetting(
-                1L, 10L, requestOf(List.of("beginner", "beginner"), null));
+                10L, requestOf(List.of("beginner", "beginner"), null));
 
         assertThat(response.getPresetKeys()).containsExactly("beginner");
     }
 
     @Test
     void 이미_설정이_있으면_저장시_갱신된다() {
-        when(workspaceRepository.existsById(1L)).thenReturn(true);
-        when(workspaceMemberRepository.existsByWorkspaceIdAndUserId(1L, 10L)).thenReturn(true);
-
         ToneSetting existing = ToneSetting.builder()
-                .workspaceId(1L)
                 .userId(10L)
                 .presetKeys(List.of("beginner"))
                 .build();
-        when(toneSettingRepository.findByWorkspaceIdAndUserId(1L, 10L)).thenReturn(Optional.of(existing));
+        when(toneSettingRepository.findByUserId(10L)).thenReturn(Optional.of(existing));
         when(toneSettingRepository.save(any(ToneSetting.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         ToneSettingResponse response =
-                toneSettingService.saveToneSetting(1L, 10L, requestOf(List.of("intermediate"), null));
+                toneSettingService.saveToneSetting(10L, requestOf(List.of("intermediate"), null));
 
         assertThat(response.getPresetKeys()).containsExactly("intermediate");
         assertThat(response.getCustomText()).isNull();
@@ -161,10 +139,7 @@ class ToneSettingServiceTest {
 
     @Test
     void presetKeys에_유효하지_않은_값이_있으면_저장시_예외를_던진다() {
-        when(workspaceRepository.existsById(1L)).thenReturn(true);
-        when(workspaceMemberRepository.existsByWorkspaceIdAndUserId(1L, 10L)).thenReturn(true);
-
-        assertThatThrownBy(() -> toneSettingService.saveToneSetting(1L, 10L, requestOf(List.of("guru"), null)))
+        assertThatThrownBy(() -> toneSettingService.saveToneSetting(10L, requestOf(List.of("guru"), null)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -7,12 +7,8 @@ import com.hufsphere.linkboard.dto.request.ToneSettingRequest;
 import com.hufsphere.linkboard.dto.response.ToneSettingResponse;
 import com.hufsphere.linkboard.dto.response.TonePresetResponse;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
-import com.hufsphere.linkboard.exception.WorkspaceAccessDeniedException;
-import com.hufsphere.linkboard.exception.WorkspaceNotFoundException;
 import com.hufsphere.linkboard.repository.AppUserRepository;
 import com.hufsphere.linkboard.repository.ToneSettingRepository;
-import com.hufsphere.linkboard.repository.WorkspaceMemberRepository;
-import com.hufsphere.linkboard.repository.WorkspaceRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ToneSettingService {
 
     private final ToneSettingRepository toneSettingRepository;
-    private final WorkspaceRepository workspaceRepository;
-    private final WorkspaceMemberRepository workspaceMemberRepository;
     private final AppUserRepository appUserRepository;
 
     // 1. 톤 프리셋 목록 조회. lang이 없으면 요청자의 native_lang을 사용한다.
@@ -39,19 +33,17 @@ public class ToneSettingService {
     }
 
     // 3. 톤 설정 조회. 저장된 설정이 없으면 기본값(beginner)을 에러 없이 반환한다.
-    public ToneSettingResponse getToneSetting(Long workspaceId, Long userId) {
-        validateMembership(workspaceId, userId);
-
-        return toneSettingRepository.findByWorkspaceIdAndUserId(workspaceId, userId)
+    // 워크스페이스 단위가 아니라 사용자 개인 단위 설정이라, 로그인만 되어 있으면(컨트롤러에서 검증)
+    // 워크스페이스 소속 여부와 무관하게 조회/저장할 수 있다.
+    public ToneSettingResponse getToneSetting(Long userId) {
+        return toneSettingRepository.findByUserId(userId)
                 .map(ToneSettingResponse::from)
                 .orElseGet(ToneSettingResponse::defaultResponse);
     }
 
     // 2. 톤 설정 저장(upsert). beginner/intermediate/expert 중 하나 이상 중복 선택 가능
     @Transactional
-    public ToneSettingResponse saveToneSetting(Long workspaceId, Long userId, ToneSettingRequest request) {
-        validateMembership(workspaceId, userId);
-
+    public ToneSettingResponse saveToneSetting(Long userId, ToneSettingRequest request) {
         List<String> presetKeys = request.getPresetKeys().stream().distinct().toList();
         for (String presetKey : presetKeys) {
             if (!TonePresets.isValidPresetKey(presetKey)) {
@@ -59,9 +51,8 @@ public class ToneSettingService {
             }
         }
 
-        ToneSetting toneSetting = toneSettingRepository.findByWorkspaceIdAndUserId(workspaceId, userId)
+        ToneSetting toneSetting = toneSettingRepository.findByUserId(userId)
                 .orElseGet(() -> ToneSetting.builder()
-                        .workspaceId(workspaceId)
                         .userId(userId)
                         .build());
 
@@ -73,12 +64,12 @@ public class ToneSettingService {
 
     // 4. Q&A 호출에 반영할 톤 문자열 구성. 선택된 프리셋 전부의 설명을 이어붙이고 customText를 덧붙인다.
     // 로그인하지 않았거나 저장된 설정이 없으면 beginner 기본값을 사용한다.
-    public String resolveToneText(Long workspaceId, Long userId, String lang) {
+    public String resolveToneText(Long userId, String lang) {
         List<String> presetKeys = List.of(TonePresets.DEFAULT_PRESET_KEY);
         String customText = null;
 
         if (userId != null) {
-            ToneSetting toneSetting = toneSettingRepository.findByWorkspaceIdAndUserId(workspaceId, userId)
+            ToneSetting toneSetting = toneSettingRepository.findByUserId(userId)
                     .orElse(null);
             if (toneSetting != null) {
                 presetKeys = toneSetting.getPresetKeys();
@@ -106,15 +97,5 @@ public class ToneSettingService {
                 .orElseThrow(() -> new InvalidCredentialsException("로그인이 필요합니다"));
 
         return user.getNativeLang();
-    }
-
-    private void validateMembership(Long workspaceId, Long userId) {
-        if (!workspaceRepository.existsById(workspaceId)) {
-            throw new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다");
-        }
-
-        if (!workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userId)) {
-            throw new WorkspaceAccessDeniedException("이 워크스페이스에 접근 권한이 없습니다");
-        }
     }
 }
