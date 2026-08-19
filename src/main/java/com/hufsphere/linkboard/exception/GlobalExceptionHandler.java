@@ -8,9 +8,26 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    // Spring 6.1+에서는 정적 리소스가 없을 때 조용히 404를 내려주는 대신
+    // NoResourceFoundException을 던진다. 이 예외를 따로 잡지 않으면 아래의
+    // Exception.class catch-all에 걸려 존재하지 않는 모든 경로(예: "/")가
+    // 500으로 응답하게 된다.
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(
+            NoResourceFoundException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                "요청하신 경로를 찾을 수 없습니다",
+                request
+        );
+    }
 
     @ExceptionHandler(WorkspaceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleWorkspaceNotFound(
