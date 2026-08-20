@@ -1,6 +1,5 @@
 package com.hufsphere.linkboard.service;
 
-import com.hufsphere.linkboard.client.AiServerClient;
 import com.hufsphere.linkboard.client.dto.GroupFeaturesResponse;
 import com.hufsphere.linkboard.client.dto.GroupedFeatureDto;
 import com.hufsphere.linkboard.client.dto.LinkedWorkItemDto;
@@ -37,16 +36,17 @@ public class WorkItemSyncService {
     private final WorkItemLinkRepository workItemLinkRepository;
     private final SourceConnectionRepository sourceConnectionRepository;
     private final FeatureRepository featureRepository;
-    private final AiServerClient aiServerClient;
     private final NotificationService notificationService;
 
     // AI 서버의 extract/link/group-features는 요청을 보낸 소스 하나가 아니라 워크스페이스에
     // 색인된 전체(github+notion+...)를 대상으로 응답한다 (라이브 검증으로 확인됨).
     // 그래서 소스 단위가 아니라 워크스페이스 단위로 통째로 삭제 후 다시 채워야
     // 서로 다른 소스 간 work_item_link(예: notion 결정 <-> github PR)와 기능 분류가 유지된다.
+    // group-features 호출은 SourceSyncService가 extract/link/team-norms와 함께 미리 병렬로
+    // 실행해서 결과(grouped)를 넘겨준다 — 여기서 다시 호출하지 않는다.
     @Transactional
     public void replaceForWorkspace(Workspace workspace, List<WorkItemDto> extractedItems,
-            List<WorkItemLinkGroupDto> extractedLinks, String lang, SourceType justSyncedSourceType,
+            List<WorkItemLinkGroupDto> extractedLinks, GroupFeaturesResponse grouped, SourceType justSyncedSourceType,
             Map<String, Boolean> figmaDoneByUrl, Map<String, Integer> notionCompletionByUrl) {
         Long workspaceId = workspace.getId();
 
@@ -67,8 +67,6 @@ public class WorkItemSyncService {
         Map<Integer, WorkItem> indexToItem = saveWorkItems(workspace, connectionsByType, extractedItems,
                 justSyncedSourceType, previousByUrl, figmaDoneByUrl, notionCompletionByUrl);
         saveWorkItemLinks(extractedLinks, indexToItem);
-
-        GroupFeaturesResponse grouped = aiServerClient.groupFeatures(lang);
         saveFeatures(workspace, grouped.getFeatures(), indexToItem);
 
         // 워크스페이스에 이번이 첫 동기화(어떤 소스도 아직 색인된 적 없음)면 모든 항목이 "새로" 잡혀

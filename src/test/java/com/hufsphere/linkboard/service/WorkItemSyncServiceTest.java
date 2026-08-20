@@ -7,7 +7,6 @@ import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.hufsphere.linkboard.client.AiServerClient;
 import com.hufsphere.linkboard.client.dto.GroupFeaturesResponse;
 import com.hufsphere.linkboard.client.dto.GroupedFeatureDto;
 import com.hufsphere.linkboard.client.dto.WorkItemDto;
@@ -43,8 +42,6 @@ class WorkItemSyncServiceTest {
     private SourceConnectionRepository sourceConnectionRepository;
     @Mock
     private FeatureRepository featureRepository;
-    @Mock
-    private AiServerClient aiServerClient;
     @Mock
     private NotificationService notificationService;
 
@@ -105,9 +102,8 @@ class WorkItemSyncServiceTest {
 
         GroupFeaturesResponse groupFeaturesResponse = new GroupFeaturesResponse();
         groupFeaturesResponse.setFeatures(List.of(groupedFeature));
-        when(aiServerClient.groupFeatures("ko")).thenReturn(groupFeaturesResponse);
 
-        workItemSyncService.replaceForWorkspace(workspace, List.of(item0, item1), List.of(), "ko", SourceType.GITHUB, Map.of(), Map.of());
+        workItemSyncService.replaceForWorkspace(workspace, List.of(item0, item1), List.of(), groupFeaturesResponse, SourceType.GITHUB, Map.of(), Map.of());
 
         verify(workItemLinkRepository).deleteByWorkspaceId(1L);
         verify(workItemRepository).deleteByWorkspaceId(1L);
@@ -144,9 +140,8 @@ class WorkItemSyncServiceTest {
 
         GroupFeaturesResponse emptyResponse = new GroupFeaturesResponse();
         emptyResponse.setFeatures(List.of());
-        when(aiServerClient.groupFeatures("ko")).thenReturn(emptyResponse);
 
-        workItemSyncService.replaceForWorkspace(workspace, List.of(item0), List.of(), "ko", SourceType.GITHUB, Map.of(), Map.of());
+        workItemSyncService.replaceForWorkspace(workspace, List.of(item0), List.of(), emptyResponse, SourceType.GITHUB, Map.of(), Map.of());
 
         verify(featureRepository).deleteByWorkspaceId(1L);
         verify(featureRepository, org.mockito.Mockito.never()).save(any(Feature.class));
@@ -165,7 +160,6 @@ class WorkItemSyncServiceTest {
 
         GroupFeaturesResponse emptyResponse = new GroupFeaturesResponse();
         emptyResponse.setFeatures(List.of());
-        when(aiServerClient.groupFeatures("ko")).thenReturn(emptyResponse);
 
         WorkItemDto partiallyChecked = new WorkItemDto();
         partiallyChecked.setSourceType("notion");
@@ -202,7 +196,7 @@ class WorkItemSyncServiceTest {
         );
 
         workItemSyncService.replaceForWorkspace(
-                workspace, List.of(partiallyChecked, noneChecked, fullyChecked, noSignal), List.of(), "ko",
+                workspace, List.of(partiallyChecked, noneChecked, fullyChecked, noSignal), List.of(), emptyResponse,
                 SourceType.NOTION, Map.of(), notionCompletionByUrl);
 
         ArgumentCaptor<WorkItem> savedItems = ArgumentCaptor.forClass(WorkItem.class);
@@ -251,7 +245,6 @@ class WorkItemSyncServiceTest {
 
         GroupFeaturesResponse emptyResponse = new GroupFeaturesResponse();
         emptyResponse.setFeatures(List.of());
-        when(aiServerClient.groupFeatures("ko")).thenReturn(emptyResponse);
 
         // 이번엔 GitHub만 동기화하는 중 -> Figma는 재크롤링 안 됐으니 figmaDoneByUrl이 비어있고,
         // AI는 (오래된 내용을 다시 보고) todo로 잘못 재추측함
@@ -270,7 +263,7 @@ class WorkItemSyncServiceTest {
         newFigmaItem.setUrl("https://figma.com/new-frame");
 
         workItemSyncService.replaceForWorkspace(
-                workspace, List.of(staleFigmaGuess, newFigmaItem), List.of(), "ko", SourceType.GITHUB, Map.of(), Map.of());
+                workspace, List.of(staleFigmaGuess, newFigmaItem), List.of(), emptyResponse, SourceType.GITHUB, Map.of(), Map.of());
 
         ArgumentCaptor<WorkItem> savedItems = ArgumentCaptor.forClass(WorkItem.class);
         verify(workItemRepository, atLeast(2)).save(savedItems.capture());
@@ -293,7 +286,6 @@ class WorkItemSyncServiceTest {
 
         GroupFeaturesResponse emptyResponse = new GroupFeaturesResponse();
         emptyResponse.setFeatures(List.of());
-        when(aiServerClient.groupFeatures("ko")).thenReturn(emptyResponse);
 
         WorkItemDto item0 = new WorkItemDto();
         item0.setSourceType("github");
@@ -302,7 +294,7 @@ class WorkItemSyncServiceTest {
         item0.setStatus("done");
         item0.setUrl("https://github.com/pr/1");
 
-        workItemSyncService.replaceForWorkspace(workspace, List.of(item0), List.of(), "ko", SourceType.GITHUB, Map.of(), Map.of());
+        workItemSyncService.replaceForWorkspace(workspace, List.of(item0), List.of(), emptyResponse, SourceType.GITHUB, Map.of(), Map.of());
 
         verify(notificationService, org.mockito.Mockito.never()).notifyNewWorkItemsDetected(any(), anyInt());
     }

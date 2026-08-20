@@ -6,6 +6,7 @@ import com.hufsphere.linkboard.client.NotionCrawlerClient;
 import com.hufsphere.linkboard.client.dto.ExtractTeamNormsResponse;
 import com.hufsphere.linkboard.client.dto.ExtractWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.FigmaComment;
+import com.hufsphere.linkboard.client.dto.GroupFeaturesResponse;
 import com.hufsphere.linkboard.client.dto.LinkWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.NotionPage;
 import com.hufsphere.linkboard.domain.FigmaConnection;
@@ -27,6 +28,8 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -170,9 +173,26 @@ public class SourceSyncService {
     private void syncWorkItems(SourceConnection sourceConnection, IngestSignals signals) {
         String lang = resolveLang(sourceConnection);
 
-        ExtractWorkItemsResponse extracted = aiServerClient.extractWorkItems(lang);
-        LinkWorkItemsResponse linked = aiServerClient.linkWorkItems(lang, LINK_TOP_K);
-        ExtractTeamNormsResponse teamNorms = aiServerClient.extractTeamNorms(lang);
+        // extract/link/group-features/team-norms 네 AI 호출은 서로의 결과에 의존하지 않고
+        // 전부 AI 서버의 같은 스냅샷(_store, 이번 ingest 이후로는 불변)을 독립적으로 읽기만
+        // 한다. 순차로 4번 호출하면 nginx 타임아웃(원래 60초)을 넘기기 쉬워서(라이브 검증됨:
+        // 504 발생), 병렬로 실행해 전체 소요시간을 "합"이 아니라 "가장 느린 호출 하나" 수준으로
+        // 줄인다.
+        CompletableFuture<ExtractWorkItemsResponse> extractFuture =
+                CompletableFuture.supplyAsync(() -> aiServerClient.extractWorkItems(lang));
+        CompletableFuture<LinkWorkItemsResponse> linkFuture =
+                CompletableFuture.supplyAsync(() -> aiServerClient.linkWorkItems(lang, LINK_TOP_K));
+        CompletableFuture<ExtractTeamNormsResponse> teamNormsFuture =
+                CompletableFuture.supplyAsync(() -> aiServerClient.extractTeamNorms(lang));
+        CompletableFuture<GroupFeaturesResponse> groupFuture =
+                CompletableFuture.supplyAsync(() -> aiServerClient.groupFeatures(lang));
+
+        CompletableFuture.allOf(extractFuture, linkFuture, teamNormsFuture, groupFuture).join();
+
+        ExtractWorkItemsResponse extracted = join(extractFuture);
+        LinkWorkItemsResponse linked = join(linkFuture);
+        ExtractTeamNormsResponse teamNorms = join(teamNormsFuture);
+        GroupFeaturesResponse grouped = join(groupFuture);
 
         // 코멘트 URL별 완료 여부. 같은 URL이 중복되는 경우는 없지만, 혹시 있다면 하나라도
         // 체크마크가 있으면 done으로 취급한다.
@@ -180,9 +200,23 @@ public class SourceSyncService {
                 .collect(Collectors.toMap(FigmaComment::getUrl, FigmaComment::isDone, (a, b) -> a || b));
 
         workItemSyncService.replaceForWorkspace(
-                sourceConnection.getWorkspace(), extracted.getWorkItems(), linked.getLinks(), lang,
+                sourceConnection.getWorkspace(), extracted.getWorkItems(), linked.getLinks(), grouped,
                 sourceConnection.getSourceType(), figmaDoneByUrl, signals.notionCompletionByUrl());
         teamNormService.replaceForWorkspace(sourceConnection.getWorkspace().getId(), teamNorms.getTeamNorms());
+    }
+
+    // CompletableFuture.join()은 원래 예외를 CompletionException으로 감싸서 던지는데, 그대로
+    // 두면 SourceFetchFailedException(502로 매핑됨) 대신 GlobalExceptionHandler의 catch-all
+    // (500, 메시지 없음)에 걸려서 실패 원인이 사라진다. 원래 예외를 그대로 꺼내 다시 던진다.
+    private static <T> T join(CompletableFuture<T> future) {
+        try {
+            return future.join();
+        } catch (CompletionException e) {
+            if (e.getCause() instanceof RuntimeException re) {
+                throw re;
+            }
+            throw e;
+        }
     }
 
     private String resolveLang(SourceConnection sourceConnection) {
