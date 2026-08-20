@@ -14,6 +14,7 @@ import com.hufsphere.linkboard.dto.request.QnaRequest;
 import com.hufsphere.linkboard.repository.AppUserRepository;
 import com.hufsphere.linkboard.repository.TeamNormRepository;
 import com.hufsphere.linkboard.repository.ToneSettingRepository;
+import com.hufsphere.linkboard.repository.TonePresetTranslationRepository;
 import com.hufsphere.linkboard.repository.WorkItemRepository;
 import com.hufsphere.linkboard.repository.WorkspaceRepository;
 import java.util.List;
@@ -41,12 +42,19 @@ class QnaServiceTest {
     private ToneSettingRepository toneSettingRepository;
     @Mock
     private AppUserRepository appUserRepository;
+    @Mock
+    private TonePresetTranslationRepository tonePresetTranslationRepository;
 
     private QnaService qnaService;
 
     @BeforeEach
     void setUp() {
-        ToneSettingService toneSettingService = new ToneSettingService(toneSettingRepository, appUserRepository);
+        // 이 테스트들은 전부 ko/en만 쓰므로, TonePresetTranslationService는 하드코딩된 TonePresets를
+        // 그대로 반환하는 경로만 타고 tonePresetTranslationRepository/aiServerClient는 호출되지 않는다.
+        TonePresetTranslationService tonePresetTranslationService =
+                new TonePresetTranslationService(tonePresetTranslationRepository, aiServerClient);
+        ToneSettingService toneSettingService =
+                new ToneSettingService(toneSettingRepository, appUserRepository, tonePresetTranslationService);
         qnaService = new QnaService(workspaceRepository, workItemRepository, teamNormRepository, aiServerClient, toneSettingService);
     }
 

@@ -21,6 +21,9 @@ import com.hufsphere.linkboard.client.dto.NotionPage;
 import com.hufsphere.linkboard.client.dto.AiChunkDto;
 import com.hufsphere.linkboard.client.dto.QnaAiRequest;
 import com.hufsphere.linkboard.client.dto.TeamNormInputDto;
+import com.hufsphere.linkboard.client.dto.TonePresetItemDto;
+import com.hufsphere.linkboard.client.dto.TranslateTonePresetsRequest;
+import com.hufsphere.linkboard.client.dto.TranslateTonePresetsResponse;
 import com.hufsphere.linkboard.exception.SourceFetchFailedException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -123,6 +126,19 @@ public class AiServerClient {
                     .body(ExtractTeamNormsResponse.class);
         } catch (RestClientException e) {
             throw new SourceFetchFailedException("팀 관행 분석에 실패했습니다");
+        }
+    }
+
+    public TranslateTonePresetsResponse translateTonePresets(String lang, List<TonePresetItemDto> presets) {
+        try {
+            return aiServerRestClient.post()
+                    .uri("/translate-tone-presets")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new TranslateTonePresetsRequest(lang, presets))
+                    .retrieve()
+                    .body(TranslateTonePresetsResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("톤 프리셋 번역에 실패했습니다");
         }
     }
 

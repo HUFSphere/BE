@@ -3,8 +3,13 @@ package com.hufsphere.linkboard.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.hufsphere.linkboard.client.AiServerClient;
+import com.hufsphere.linkboard.client.dto.TonePresetItemDto;
+import com.hufsphere.linkboard.client.dto.TranslateTonePresetsResponse;
 import com.hufsphere.linkboard.domain.AppUser;
 import com.hufsphere.linkboard.domain.ToneSetting;
 import com.hufsphere.linkboard.dto.request.ToneSettingRequest;
@@ -13,11 +18,12 @@ import com.hufsphere.linkboard.dto.response.TonePresetResponse;
 import com.hufsphere.linkboard.exception.InvalidCredentialsException;
 import com.hufsphere.linkboard.repository.AppUserRepository;
 import com.hufsphere.linkboard.repository.ToneSettingRepository;
+import com.hufsphere.linkboard.repository.TonePresetTranslationRepository;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -29,9 +35,22 @@ class ToneSettingServiceTest {
     private ToneSettingRepository toneSettingRepository;
     @Mock
     private AppUserRepository appUserRepository;
+    @Mock
+    private TonePresetTranslationRepository tonePresetTranslationRepository;
+    @Mock
+    private AiServerClient aiServerClient;
 
-    @InjectMocks
     private ToneSettingService toneSettingService;
+
+    @BeforeEach
+    void setUp() {
+        // ko/en은 TonePresetTranslationService가 하드코딩된 TonePresets를 그대로 반환하는 경로만
+        // 타므로(레포지토리/AI 클라이언트 미호출), 실제 인스턴스를 그대로 써도 ko/en 테스트는
+        // 네트워크 호출 없이 결정적으로 동작한다.
+        TonePresetTranslationService tonePresetTranslationService =
+                new TonePresetTranslationService(tonePresetTranslationRepository, aiServerClient);
+        toneSettingService = new ToneSettingService(toneSettingRepository, appUserRepository, tonePresetTranslationService);
+    }
 
     private static ToneSettingRequest requestOf(List<String> presetKeys, String customText) {
         ToneSettingRequest request = new ToneSettingRequest();
@@ -51,10 +70,27 @@ class ToneSettingServiceTest {
         assertThat(en.get(0).getLabel()).isEqualTo("Concise");
     }
 
+    // ko/en이 아닌 언어는 하드코딩된 대체(예전엔 무조건 영어로 대체)가 아니라, AI 서버로 실시간
+    // 번역을 시도해야 한다. 번역 내용 자체(문구)는 AI가 결정하므로 검증하지 않고, 그 경로를
+    // 실제로 타는지(캐시 미스 -> AI 호출 -> 저장)만 확인한다.
     @Test
-    void 지원하지_않는_언어는_영어로_대체된다() {
+    void 지원하지_않는_언어는_AI로_번역을_시도하고_결과를_캐시에_저장한다() {
+        when(tonePresetTranslationRepository.findByLang("de")).thenReturn(List.of());
+
+        TranslateTonePresetsResponse response = new TranslateTonePresetsResponse();
+        response.setPresets(List.of(
+                new TonePresetItemDto("concise", "Kurz", "Bitte antworten Sie kurz."),
+                new TonePresetItemDto("detailed", "Detailliert", "Bitte erklären Sie ausführlich."),
+                new TonePresetItemDto("friendly", "Freundlich", "Bitte antworten Sie freundlich.")
+        ));
+        when(aiServerClient.translateTonePresets(eq("de"), any())).thenReturn(response);
+        when(tonePresetTranslationRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
         List<TonePresetResponse> other = toneSettingService.getPresets(null, "de");
-        assertThat(other.get(0).getLabel()).isEqualTo("Concise");
+
+        assertThat(other).extracting(TonePresetResponse::getLabel)
+                .containsExactly("Kurz", "Detailliert", "Freundlich");
+        verify(aiServerClient).translateTonePresets(eq("de"), any());
     }
 
     @Test

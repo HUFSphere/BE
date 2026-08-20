@@ -24,12 +24,14 @@ public class ToneSettingService {
 
     private final ToneSettingRepository toneSettingRepository;
     private final AppUserRepository appUserRepository;
+    private final TonePresetTranslationService tonePresetTranslationService;
 
-    // 1. 톤 프리셋 목록 조회. lang이 없으면 요청자의 native_lang을 사용한다.
+    // 1. 톤 프리셋 목록 조회. lang이 없으면 요청자의 native_lang을 사용한다. ko/en이 아닌 언어는
+    // TonePresetTranslationService가 AI로 실시간 번역해서(캐싱됨) 반환한다.
     public List<TonePresetResponse> getPresets(Long requesterId, String lang) {
         String resolvedLang = (lang != null && !lang.isBlank()) ? lang : resolveRequesterNativeLang(requesterId);
 
-        return TonePresets.getPresets(resolvedLang).stream()
+        return tonePresetTranslationService.resolvePresets(resolvedLang).stream()
                 .map(TonePresetResponse::from)
                 .toList();
     }
@@ -84,7 +86,7 @@ public class ToneSettingService {
         }
 
         String combinedDescription = presetKeys.stream()
-                .map(presetKey -> TonePresets.getDescription(presetKey, lang))
+                .map(presetKey -> tonePresetTranslationService.resolveDescription(presetKey, lang))
                 .collect(Collectors.joining(" "));
 
         if (customText == null || customText.isBlank()) {
