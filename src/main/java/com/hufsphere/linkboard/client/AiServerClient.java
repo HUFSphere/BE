@@ -20,6 +20,8 @@ import com.hufsphere.linkboard.client.dto.NotionIngestResponse;
 import com.hufsphere.linkboard.client.dto.NotionPage;
 import com.hufsphere.linkboard.client.dto.AiChunkDto;
 import com.hufsphere.linkboard.client.dto.QnaAiRequest;
+import com.hufsphere.linkboard.client.dto.SuggestQuestionsRequest;
+import com.hufsphere.linkboard.client.dto.SuggestQuestionsResponse;
 import com.hufsphere.linkboard.client.dto.TeamNormInputDto;
 import com.hufsphere.linkboard.client.dto.TonePresetItemDto;
 import com.hufsphere.linkboard.client.dto.TranslateTonePresetsRequest;
@@ -126,6 +128,19 @@ public class AiServerClient {
                     .body(ExtractTeamNormsResponse.class);
         } catch (RestClientException e) {
             throw new SourceFetchFailedException("팀 관행 분석에 실패했습니다");
+        }
+    }
+
+    public SuggestQuestionsResponse suggestQuestions(String lang) {
+        try {
+            return aiServerRestClient.post()
+                    .uri("/suggest-questions")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new SuggestQuestionsRequest(lang))
+                    .retrieve()
+                    .body(SuggestQuestionsResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("추천 질문 생성에 실패했습니다");
         }
     }
 

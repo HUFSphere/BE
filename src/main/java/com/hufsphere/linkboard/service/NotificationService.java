@@ -63,12 +63,16 @@ public class NotificationService {
     @Transactional
     public void notifyMemberInviteAccepted(Workspace workspace, AppUser newMember) {
         AppUser owner = workspace.getOwner();
-        if (owner == null || owner.getId().equals(newMember.getId())) {
-            return;
+        if (owner != null && !owner.getId().equals(newMember.getId())) {
+            save(owner.getId(), workspace.getId(), NotificationType.MEMBER_INVITE_ACCEPTED,
+                    newMember.getName() + "님이 워크스페이스에 참여했습니다");
         }
 
-        save(owner.getId(), workspace.getId(), NotificationType.MEMBER_INVITE_ACCEPTED,
-                newMember.getName() + "님이 워크스페이스에 참여했습니다");
+        // 새로 합류한 멤버 본인에게도 알림을 남긴다. 팀 관행/추천 질문은 워크스페이스 단위라
+        // 이미 조회 가능하지만, 알림 목록은 유저 단위라 합류 전 이벤트를 못 보므로 최소한
+        // 합류했다는 알림 하나는 바로 보이게 한다.
+        save(newMember.getId(), workspace.getId(), NotificationType.MEMBER_INVITE_ACCEPTED,
+                workspace.getName() + " 워크스페이스에 참여했습니다. 팀 관행 분석과 추천 질문을 확인해보세요");
     }
 
     @Transactional
