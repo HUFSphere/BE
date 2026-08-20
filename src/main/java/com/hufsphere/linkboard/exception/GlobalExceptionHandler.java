@@ -414,18 +414,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(TeamNormNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleTeamNormNotFound(
-            TeamNormNotFoundException ex,
-            HttpServletRequest request
-    ) {
-        return buildResponse(
-                HttpStatus.NOT_FOUND,
-                ex.getMessage(),
-                request
-        );
-    }
-
     @ExceptionHandler(NotificationNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotificationNotFound(
             NotificationNotFoundException ex,

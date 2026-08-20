@@ -19,29 +19,33 @@ public class TeamNormResponseDto {
     @Schema(description = "관행 ID", example = "1")
     private Long id;
 
-    @Schema(description = "워크스페이스 ID", example = "1")
-    private Long workspaceId;
-
-    @Schema(description = "관행 카테고리", example = "COMMUNICATION")
+    @Schema(description = "관행 카테고리", example = "CODE_REVIEW")
     private String category;
 
-    @Schema(description = "관행 내용", example = "오후 6시 이후의 급한 연락은 슬랙 멘션으로 남겨주세요.")
+    @Schema(description = "관행 내용 (1문장)", example = "최근 PR 12건 중 10건이 리뷰어 2명의 승인을 받은 뒤 머지되었습니다.")
     private String content;
 
-    @Schema(description = "생성 일시", example = "2026-08-14T18:00:00")
-    private LocalDateTime createdAt;
+    @Schema(description = "근거 기록 링크", example = "https://github.com/HUFSphere/BE/pull/16")
+    private String evidenceUrl;
 
-    @Schema(description = "수정 일시", example = "2026-08-14T18:00:00")
-    private LocalDateTime updatedAt;
+    @Schema(description = "근거 기록 제목", example = "feat: 인증·워크스페이스·소스 연동 반영")
+    private String evidenceTitle;
+
+    @Schema(description = "근거 기록의 소스 타입", example = "github")
+    private String evidenceSourceType;
+
+    @Schema(description = "생성(마지막 재생성) 일시", example = "2026-08-20T18:00:00")
+    private LocalDateTime createdAt;
 
     public static TeamNormResponseDto from(TeamNorm norm) {
         return TeamNormResponseDto.builder()
                 .id(norm.getId())
-                .workspaceId(norm.getWorkspaceId())
                 .category(norm.getCategory())
                 .content(norm.getContent())
+                .evidenceUrl(norm.getEvidenceUrl())
+                .evidenceTitle(norm.getEvidenceTitle())
+                .evidenceSourceType(norm.getEvidenceSourceType())
                 .createdAt(norm.getCreatedAt())
-                .updatedAt(norm.getUpdatedAt())
                 .build();
     }
 }

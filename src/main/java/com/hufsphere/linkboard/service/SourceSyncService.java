@@ -3,6 +3,7 @@ package com.hufsphere.linkboard.service;
 import com.hufsphere.linkboard.client.AiServerClient;
 import com.hufsphere.linkboard.client.FigmaCrawlerClient;
 import com.hufsphere.linkboard.client.NotionCrawlerClient;
+import com.hufsphere.linkboard.client.dto.ExtractTeamNormsResponse;
 import com.hufsphere.linkboard.client.dto.ExtractWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.FigmaComment;
 import com.hufsphere.linkboard.client.dto.LinkWorkItemsResponse;
@@ -51,6 +52,7 @@ public class SourceSyncService {
     private final NotionCrawlerClient notionCrawlerClient;
     private final FigmaCrawlerClient figmaCrawlerClient;
     private final WorkItemSyncService workItemSyncService;
+    private final TeamNormService teamNormService;
     private final NotificationService notificationService;
 
     public SourceSyncResponse sync(Long sourceId) {
@@ -170,6 +172,7 @@ public class SourceSyncService {
 
         ExtractWorkItemsResponse extracted = aiServerClient.extractWorkItems(lang);
         LinkWorkItemsResponse linked = aiServerClient.linkWorkItems(lang, LINK_TOP_K);
+        ExtractTeamNormsResponse teamNorms = aiServerClient.extractTeamNorms(lang);
 
         // 코멘트 URL별 완료 여부. 같은 URL이 중복되는 경우는 없지만, 혹시 있다면 하나라도
         // 체크마크가 있으면 done으로 취급한다.
@@ -179,6 +182,7 @@ public class SourceSyncService {
         workItemSyncService.replaceForWorkspace(
                 sourceConnection.getWorkspace(), extracted.getWorkItems(), linked.getLinks(), lang,
                 sourceConnection.getSourceType(), figmaDoneByUrl, signals.notionCompletionByUrl());
+        teamNormService.replaceForWorkspace(sourceConnection.getWorkspace().getId(), teamNorms.getTeamNorms());
     }
 
     private String resolveLang(SourceConnection sourceConnection) {

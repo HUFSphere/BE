@@ -2,6 +2,8 @@ package com.hufsphere.linkboard.client;
 
 import com.hufsphere.linkboard.client.dto.AskRequest;
 import com.hufsphere.linkboard.client.dto.AskResponse;
+import com.hufsphere.linkboard.client.dto.ExtractTeamNormsRequest;
+import com.hufsphere.linkboard.client.dto.ExtractTeamNormsResponse;
 import com.hufsphere.linkboard.client.dto.ExtractWorkItemsRequest;
 import com.hufsphere.linkboard.client.dto.ExtractWorkItemsResponse;
 import com.hufsphere.linkboard.client.dto.FigmaComment;
@@ -108,6 +110,19 @@ public class AiServerClient {
                     .body(GroupFeaturesResponse.class);
         } catch (RestClientException e) {
             throw new SourceFetchFailedException("기능 분류에 실패했습니다");
+        }
+    }
+
+    public ExtractTeamNormsResponse extractTeamNorms(String lang) {
+        try {
+            return aiServerRestClient.post()
+                    .uri("/extract-team-norms")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new ExtractTeamNormsRequest(lang))
+                    .retrieve()
+                    .body(ExtractTeamNormsResponse.class);
+        } catch (RestClientException e) {
+            throw new SourceFetchFailedException("팀 관행 분석에 실패했습니다");
         }
     }
 
