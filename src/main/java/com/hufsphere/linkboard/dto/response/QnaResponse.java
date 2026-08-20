@@ -4,6 +4,7 @@ import com.hufsphere.linkboard.client.dto.AskResponse;
 import com.hufsphere.linkboard.client.dto.TeamNormMatchDto;
 import com.hufsphere.linkboard.domain.TeamNorm;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -51,6 +52,16 @@ public class QnaResponse {
                 })
                 .filter(Objects::nonNull)
                 .toList();
+
+        // AI가 이 질문과 직접 관련된 팀 관행을 못 찾아 빈 배열을 준 경우, 워크스페이스에 관행이
+        // 하나라도 있으면 카드가 완전히 비어 보이지 않도록 최소 1개(가장 최근 것)는 폴백으로 보여준다.
+        if (relatedTeamNorms.isEmpty() && !teamNormsById.isEmpty()) {
+            TeamNorm fallback = teamNormsById.values().stream()
+                    .max(Comparator.comparing(TeamNorm::getId))
+                    .orElseThrow();
+            relatedTeamNorms = List.of(TeamNormCardResponse.of(fallback,
+                    "이 질문과 직접 관련된 팀 관행은 못 찾았지만, 최근 관찰된 팀 관행을 참고해보세요"));
+        }
 
         return new QnaResponse(askResponse.getAnswer(), sources, followUpQuestions, relatedTeamNorms);
     }
