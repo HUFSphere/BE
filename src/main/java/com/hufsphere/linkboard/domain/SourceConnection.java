@@ -49,14 +49,6 @@ public class SourceConnection {
         return this.targetRepoOrBoard;
     }
 
-    public boolean isSyncInProgress() {
-        return "SYNCING".equalsIgnoreCase(this.status);
-    }
-
-    public void startSyncing() {
-        this.status = "SYNCING";
-    }
-
     public void failSyncing() {
         this.status = "FAILED";
     }

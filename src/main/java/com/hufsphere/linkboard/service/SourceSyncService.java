@@ -57,13 +57,15 @@ public class SourceSyncService {
         SourceConnection sourceConnection = sourceConnectionRepository.findById(sourceId)
                 .orElseThrow(() -> new SourceNotFoundException("소스 연결을 찾을 수 없습니다"));
 
-        if (sourceConnection.isSyncInProgress()) {
+        // 읽기(findById)와 쓰기(save)가 따로 떨어져 있으면 그 사이에 동시 요청이 끼어들어
+        // 여러 sync가 동시에 통과할 수 있다(예: 프론트가 실패 시 자동 재시도하며 중복 호출하는 경우).
+        // markSyncing은 "SYNCING이 아닐 때만 SYNCING으로" DB 레벨에서 원자적으로 처리하므로,
+        // 동시 요청이 와도 딱 하나만 0이 아닌 값을 받아 통과한다.
+        if (sourceConnectionRepository.markSyncing(sourceId) == 0) {
             throw new SyncAlreadyRunningException("이미 동기화가 진행 중입니다");
         }
 
         LocalDateTime startedAt = LocalDateTime.now();
-        sourceConnection.startSyncing();
-        sourceConnectionRepository.save(sourceConnection);
 
         try {
             IngestSignals signals = ingest(sourceConnection);
