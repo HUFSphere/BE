@@ -1,5 +1,6 @@
 package com.hufsphere.linkboard.service;
 
+import com.hufsphere.linkboard.client.AiServerClient;
 import com.hufsphere.linkboard.client.dto.WorkItemResponseDto;
 import com.hufsphere.linkboard.client.dto.WorkspaceInviteResponse;
 import com.hufsphere.linkboard.common.FigmaUrlParser;
@@ -41,6 +42,7 @@ public class WorkspaceService {
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final AppUserRepository appUserRepository;
     private final SourceConnectionRepository sourceConnectionRepository;
+    private final AiServerClient aiServerClient;
 
     /*
      * 2.1 워크스페이스 생성
@@ -283,15 +285,14 @@ public class WorkspaceService {
 
     // 5.6 대시보드 AI 추천 질문
     public SuggestedQuestionsResponse getSuggestedQuestions(Long workspaceId, String lang) {
-        if (!workspaceRepository.existsById(workspaceId)) {
-            throw new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다. id=" + workspaceId);
-        }
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new WorkspaceNotFoundException("워크스페이스를 찾을 수 없습니다. id=" + workspaceId));
 
-        return new SuggestedQuestionsResponse(List.of(
-                "이 프로젝트에서 인증 방식은 왜 JWT로 정해졌나요?",
-                "최근에 가장 많이 논의된 기능은 무엇인가요?",
-                "디자인 관련 결정 중 아직 개발에 반영 안 된 게 있나요?"
-        ));
+        String resolvedLang = lang != null && !lang.isBlank() ? lang : workspace.getDefaultLanguage();
+        var aiResponse = aiServerClient.suggestQuestions(
+                resolvedLang != null && !resolvedLang.isBlank() ? resolvedLang : "ko");
+
+        return new SuggestedQuestionsResponse(aiResponse.getQuestions());
     }
 
     // 5.7 대시보드 최근 활동
