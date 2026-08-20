@@ -101,7 +101,17 @@ public class FigmaCrawlerClient {
             return Map.of();
         }
 
-        JsonNode body = fetchNodesRaw(accessToken, fileKey, String.join(",", nodeIds));
+        JsonNode body;
+        try {
+            body = fetchNodesRaw(accessToken, fileKey, String.join(",", nodeIds));
+        } catch (SourceFetchFailedException e) {
+            // 노드 이름은 프레임 표시용 부가 정보라, 조회가 실패해도(대형 파일에서 Figma 쪽
+            // 노드 API가 타임아웃되는 경우 등) 동기화 전체를 막지 않는다 — 이름 대신 nodeId를
+            // 그대로 쓴다(아래 fetchComments의 getOrDefault(nodeId, nodeId)).
+            log.warn("Figma 노드 이름 조회 실패, nodeId를 이름으로 대체: fileKey={}", fileKey, e);
+            return Map.of();
+        }
+
         Map<String, String> names = new HashMap<>();
         for (String nodeId : nodeIds) {
             String name = body.path("nodes").path(nodeId).path("document").path("name").asString(nodeId);
