@@ -47,15 +47,18 @@ public class TonePresetController {
                               "data": [
                                 {
                                   "presetKey": "concise",
-                                  "label": "간결하게"
+                                  "label": "간결하게",
+                                  "description": "핵심만 간결하게 답변해주세요."
                                 },
                                 {
                                   "presetKey": "detailed",
-                                  "label": "자세하게"
+                                  "label": "자세하게",
+                                  "description": "배경과 이유를 자세히 설명해주세요."
                                 },
                                 {
                                   "presetKey": "friendly",
-                                  "label": "친근하게"
+                                  "label": "친근하게",
+                                  "description": "친근하고 편안한 말투로 답변해주세요."
                                 }
                               ]
                             }"""))),
