@@ -9,6 +9,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -27,6 +28,11 @@ public class FigmaCrawlerClient {
     // Figma 코멘트 reactions[].emoji는 ":white_check_mark:" 셧코드로 내려오는데,
     // 혹시 유니코드 문자로 오는 경우까지 대비해 둘 다 인정한다.
     private static final Set<String> CHECK_MARK_EMOJIS = Set.of(":white_check_mark:", "✅");
+
+    // 코멘트 조회 직후 텀 없이 노드 조회가 나가면 Figma의 초당 요청 제한(burst limit)에
+    // 자주 걸려서, 429를 받으면 짧게 대기 후 한 번만 재시도한다.
+    private static final int MAX_ATTEMPTS = 2;
+    private static final long RETRY_DELAY_MS = 1500;
 
     private final RestClient figmaRestClient;
 
@@ -105,28 +111,52 @@ public class FigmaCrawlerClient {
     }
 
     private JsonNode fetchCommentsRaw(String accessToken, String fileKey) {
-        try {
-            return figmaRestClient.get()
-                    .uri(FIGMA_API_BASE + "/v1/files/{fileKey}/comments", fileKey)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                    .retrieve()
-                    .body(JsonNode.class);
-        } catch (RestClientException e) {
-            logFigmaError("코멘트 조회", fileKey, e);
-            throw new SourceFetchFailedException("Figma 코멘트 조회에 실패했습니다: " + figmaErrorDetail(e));
-        }
+        return fetchWithRetry(
+                () -> figmaRestClient.get()
+                        .uri(FIGMA_API_BASE + "/v1/files/{fileKey}/comments", fileKey)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .retrieve()
+                        .body(JsonNode.class),
+                "코멘트 조회", fileKey);
     }
 
     private JsonNode fetchNodesRaw(String accessToken, String fileKey, String ids) {
+        return fetchWithRetry(
+                () -> figmaRestClient.get()
+                        .uri(FIGMA_API_BASE + "/v1/files/{fileKey}/nodes?ids={ids}", fileKey, ids)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .retrieve()
+                        .body(JsonNode.class),
+                "노드 조회", fileKey);
+    }
+
+    // 429(rate limit)만 재시도 대상으로 삼는다. 그 외 오류는 재시도해도 결과가 같으므로 바로 던진다.
+    private JsonNode fetchWithRetry(Supplier<JsonNode> request, String step, String fileKey) {
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                return request.get();
+            } catch (RestClientResponseException e) {
+                boolean isLastAttempt = attempt == MAX_ATTEMPTS;
+                if (e.getStatusCode().value() != 429 || isLastAttempt) {
+                    logFigmaError(step, fileKey, e);
+                    throw new SourceFetchFailedException("Figma " + step + "에 실패했습니다: " + figmaErrorDetail(e));
+                }
+                log.warn("Figma {} 429 rate limit, {}ms 후 재시도: fileKey={}", step, RETRY_DELAY_MS, fileKey);
+                sleep(RETRY_DELAY_MS);
+            } catch (RestClientException e) {
+                logFigmaError(step, fileKey, e);
+                throw new SourceFetchFailedException("Figma " + step + "에 실패했습니다: " + figmaErrorDetail(e));
+            }
+        }
+        throw new IllegalStateException("unreachable");
+    }
+
+    private void sleep(long millis) {
         try {
-            return figmaRestClient.get()
-                    .uri(FIGMA_API_BASE + "/v1/files/{fileKey}/nodes?ids={ids}", fileKey, ids)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                    .retrieve()
-                    .body(JsonNode.class);
-        } catch (RestClientException e) {
-            logFigmaError("노드 조회", fileKey, e);
-            throw new SourceFetchFailedException("Figma 노드 조회에 실패했습니다: " + figmaErrorDetail(e));
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new SourceFetchFailedException("Figma 조회가 중단되었습니다");
         }
     }
 

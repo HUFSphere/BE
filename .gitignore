@@ -45,3 +45,6 @@ application-prod-local.yaml
 
 ### Memory ###
 memory/
+
+### Claude Code ###
+.claude/
